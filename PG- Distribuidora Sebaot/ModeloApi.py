@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Request, Form, HTTPException, Depends
+from fastapi import FastAPI, Request, Form, HTTPException, Depends, status
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
-from fastapi.security import HTTPBearer
+from fastapi.responses import RedirectResponse, JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
@@ -11,13 +11,27 @@ import os
 from datetime import datetime
 
 app = FastAPI(title="Gestor de Pedidos", version="1.0.0")
+app.add_middleware(SessionMiddleware, secret_key="Natha0908I45")
+
 
 # Configuración de plantillas y archivos estáticos
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configuración de seguridad
-security = HTTPBearer()
+def get_current_user(request: Request) -> Optional[dict]:
+    """Obtiene el usuario actual de la sesión"""
+    return request.session.get("user")
+
+def require_login(request: Request):
+    """Verifica que el usuario esté autenticado"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+            headers={"Location": "/"}
+        )
+    return user
 
 # ================================================
 # MODELOS DE DATOS
@@ -121,32 +135,50 @@ def conexion_sql():
 @app.get("/")
 async def get_login(request: Request):
     """Página de inicio de sesión"""
+    user = get_current_user(request)
+    if user:
+        return RedirectResponse(url="/index", status_code=302)
+    
     return templates.TemplateResponse("login.html", {"request": request})
 
 @app.get("/index")
-async def get_login(request: Request):
+async def get_login(request: Request, user: dict = Depends(require_login)):
     """Página Principal"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "usuario": user.get("nombre_usuario"),
+        "perfil": user.get("codigo_perfil")
+        })
 
 @app.get("/clientes")
-async def get_login(request: Request):
+async def get_login(request: Request, user: dict = Depends(require_login)):
     """Página Principal"""
-    return templates.TemplateResponse("clientes.html", {"request": request})
+    return templates.TemplateResponse("clientes.html", {
+        "request": request,
+        "usuario": user.get("nombre_usuario"),
+        "perfil": user.get("codigo_perfil")
+        })
 
 @app.get("/pedidos")
-async def get_login(request: Request):
+async def get_login(request: Request, user: dict = Depends(require_login)):
     """Página Principal"""
-    return templates.TemplateResponse("pedidos.html", {"request": request})
+    return templates.TemplateResponse("pedidos.html", {
+        "request": request,
+        "usuario": user.get("nombre_usuario"),
+        "perfil": user.get("codigo_perfil")
+        })
 
 @app.get("/productos")
-async def get_productos_page(request: Request):
+async def get_productos_page(request: Request, user: dict = Depends(require_login)):
     """Página de productos"""
     try:
         # Obtener productos directamente desde la base de datos
         productos = await get_productos_data()
         return templates.TemplateResponse("Productos.html", {
             "request": request, 
-            "contenido_producto": productos
+            "contenido_producto": productos,
+            "usuario": user.get("nombre_usuario"),
+            "perfil": user.get("codigo_perfil")
         })
     except Exception as e:
         print(f"Error al cargar productos: {e}")
@@ -162,13 +194,12 @@ async def get_productos_page(request: Request):
 @app.post("/login_datos")
 async def post_login_frontend(request: Request, nombre: str = Form(...), contrasena: str = Form(...)):
     """Procesar login desde formulario HTML"""
-    print(f"🔐 Intento de login HTML - Usuario: '{nombre}', Contraseña length: {len(contrasena)}")
+    print(f"-- Intento de login HTML - Usuario: '{nombre}', Contraseña length: {len(contrasena)}")
     
     try:
         # Limpiar espacios en blanco
         nombre = nombre.strip()
         contrasena = contrasena.strip()
-        print(f"🧹 Después de limpiar - Usuario: '{nombre}', Contraseña length: {len(contrasena)}")
         
         # Validar que los campos no estén vacíos
         if not nombre or not contrasena:
@@ -180,43 +211,40 @@ async def post_login_frontend(request: Request, nombre: str = Form(...), contras
             })
         
         # Autenticar usuario
-        print("🔍 Iniciando autenticación...")
+        print("Iniciando autenticación...")
         auth_result = await authenticate_user(nombre, contrasena)
-        print(f"📊 Resultado autenticación HTML: {auth_result}")
+        print(f"Resultado autenticación HTML: {auth_result}")
         
         if auth_result["authenticated"]:
-            codigo_perfil = auth_result.get("codigo_perfil")
-            nombre_usuario = auth_result.get("nombre_usuario", "Usuario")
+            request.session["user"] = {
+                "user_id": auth_result.get("user_id"),
+                "nombre_usuario": auth_result.get("nombre_usuario"),
+                "codigo_perfil": auth_result.get("codigo_perfil"),
+                "usuario": nombre
+            }
             
-            print(f"✅ Login HTML exitoso - Perfil: {codigo_perfil}, Usuario: {nombre_usuario}")
-            
-            # Redirigir según el perfil del usuario
-            if codigo_perfil in [1, 2]:  # ADMINISTRADOR o VENDEDOR
-                print("🎯 Redirigiendo a página de éxito")
-                # Temporalmente usamos RedirectResponse para evitar problemas con templates faltantes
-                return templates.TemplateResponse("index.html", {"request": request})
-            else:
-                print(f"❌ Perfil no reconocido: {codigo_perfil}")
-                return templates.TemplateResponse("login.html", {
-                    "request": request,
-                    "error": f"Perfil de usuario no reconocido: {codigo_perfil}"
-                })
+            # Redirigir al dashboard
+            return RedirectResponse(url="/index", status_code=302)
         else:
-            error_msg = auth_result.get("message", "Error de autenticación")
-            print(f"❌ Login HTML fallido: {error_msg}")
             return templates.TemplateResponse("login.html", {
                 "request": request,
-                "error": error_msg
+                "error": auth_result.get("message", "Credenciales incorrectas")
             })
             
     except Exception as e:
-        print(f"💥 Error crítico en login HTML: {str(e)}")
+        print(f" Error crítico en login HTML: {str(e)}")
         import traceback
         traceback.print_exc()
         return templates.TemplateResponse("login.html", {
             "request": request,
             "error": "Error interno del servidor. Revise los logs en la consola."
         })
+    
+@app.get("/logout")
+async def logout(request: Request):
+    """Cerrar sesión"""
+    request.session.clear()
+    return RedirectResponse(url="/", status_code=302)
 
 @app.post("/api/autenticacion", response_model=AuthResponse)
 async def authenticate_api(login_data: LoginRequest):
@@ -233,14 +261,13 @@ async def authenticate_api(login_data: LoginRequest):
 
 async def authenticate_user(usuario: str, clave: str) -> dict:
     """Función auxiliar para autenticar usuario"""
-    print(f"🔐 Autenticando usuario: {usuario}")
+    print(f"Autenticando usuario: {usuario}")
     
     # Probar conexión primero
-    print("📡 Intentando conectar a la base de datos...")
     conn = conexion_sql()
     
     if not conn:
-        print("❌ No se pudo establecer conexión a la base de datos")
+        print(" No se pudo establecer conexión a la base de datos")
         return {
             'authenticated': False,
             'message': 'Error de conexión a la base de datos. Verifique la configuración.'
@@ -256,11 +283,11 @@ async def authenticate_user(usuario: str, clave: str) -> dict:
         WHERE USUARIO = ? AND CLAVE = ?
         """
         
-        print(f"🔍 Ejecutando consulta para usuario: {usuario}")
+        print(f"-- Ejecutando consulta para usuario: {usuario}")
         cursor.execute(consulta_sql, (usuario, clave))
         result = cursor.fetchone()
         
-        print(f"📊 Resultado de consulta: {result}")
+        print(f"-- Resultado de consulta: {result}")
         
         if result:
             user_data = {
@@ -272,27 +299,27 @@ async def authenticate_user(usuario: str, clave: str) -> dict:
             print(f"✅ Usuario autenticado: {user_data}")
             return user_data
         else:
-            print("❌ Usuario no encontrado o credenciales incorrectas")
+            print("-- Usuario no encontrado o credenciales incorrectas")
             
             # Verificar si el usuario existe
             cursor.execute("SELECT COUNT(*) FROM USUARIOS WHERE USUARIO = ?", (usuario,))
             user_exists = cursor.fetchone()[0]
             
             if user_exists > 0:
-                print("🔍 El usuario existe, contraseña incorrecta")
+                print("-- El usuario existe, contraseña incorrecta")
                 return {
                     'authenticated': False,
                     'message': 'Contraseña incorrecta'
                 }
             else:
-                print("🔍 El usuario no existe")
+                print("-- El usuario no existe")
                 return {
                     'authenticated': False,
                     'message': 'Usuario no encontrado'
                 }
             
     except Exception as e:
-        print(f"💥 Error en consulta de autenticación: {str(e)}")
+        print(f"-- Error en consulta de autenticación: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
@@ -466,7 +493,7 @@ async def debug_login(usuario: str = Form(...), clave: str = Form(...)):
 # ================================================
 
 @app.get("/listado_clientes")
-async def get_clientes_data():
+async def get_clientes_data(user: dict = Depends(require_login)):
     """API endpoint para obtener listado de clientes"""
     connection = conexion_sql()
     
@@ -620,11 +647,11 @@ async def eliminar_cliente(codigo_cliente: int):
         connection.close()
 
 # ================================================
-# RUTAS PARA PEDIDOS (COMPLETAS)
+# RUTAS PARA PEDIDOS
 # ================================================
 
 @app.get("/listado_pedidos")
-async def get_pedidos_data():
+async def get_pedidos_data(user: dict = Depends(require_login)):
     """API endpoint para obtener listado de pedidos"""
     connection = conexion_sql()
     
@@ -649,7 +676,7 @@ async def get_pedidos_data():
         
         json_data = [{
             'NUMERO_PEDIDO': row[0],
-            'FECHA': row[1].strftime('%d/%m/%Y') if row[1] else '',
+            'FECHA': row[1].strftime('%d/%m/%Y %H:%M:%S') if row[1] else '',
             'NOMBRE_CLIENTE': row[2],
             'NIT': row[3],
             'DIRECCION': row[4],
@@ -667,7 +694,7 @@ async def get_pedidos_data():
         connection.close()
 
 @app.get("/numero_pedido")
-async def get_numero_pedido():
+async def get_numero_pedido(user: dict = Depends(require_login)):
     """Obtener siguiente número de pedido"""
     connection = conexion_sql()
     
@@ -782,11 +809,10 @@ async def insertar_pedido_enc(pedido_data: dict):
         
         # Convertir fecha de DD/MM/YYYY a formato datetime
         fecha_str = pedido_data.get('FECHA_PEDIDO')
-        if '/' in fecha_str:
-            parts = fecha_str.split('/')
-            fecha_pedido = f"{parts[2]}-{parts[1]}-{parts[0]}"
+        if fecha_str and '/' in fecha_str:
+            fecha_pedido = datetime.strptime(fecha_str, "%d/%m/%Y %H:%M:%S")
         else:
-            fecha_pedido = fecha_str
+            fecha_pedido = datetime.now() 
         
         cursor.execute("""
             INSERT INTO PEDIDOS_ENC (
@@ -1011,7 +1037,7 @@ async def imprimir_pedido(request: Request, numero_pedido: int):
         detalles = cursor.fetchall()
         
         # Formatear fecha
-        fecha_pedido = encabezado[1].strftime('%d/%m/%Y') if encabezado[1] else ''
+        fecha_pedido = encabezado[1].strftime('%d/%m/%Y %H:%M:%S Hrs') if encabezado[1] else ''
         
         # Preparar datos para el template
         pedido_data = {
@@ -1061,7 +1087,7 @@ async def imprimir_pedido(request: Request, numero_pedido: int):
 # ================================================
 
 @app.get("/api/productos", response_model=List[ProductResponse])
-async def get_productos_api():
+async def get_productos_api(user: dict = Depends(require_login)):
     """API endpoint para obtener productos (JSON)"""
     try:
         productos = await get_productos_data()
@@ -1103,14 +1129,14 @@ async def post_productos_actualizados(request: Request):
         })
 
 # ================================================
-# RUTAS DE PRODUCTOS COMPLETAS
+# RUTAS DE PRODUCTOS
 # ================================================
 
 
 
 
 @app.get("/listado_productos")
-async def get_productos_listado():
+async def get_productos_listado(user: dict = Depends(require_login)):
     """API endpoint para obtener listado completo de productos (alias)"""
     try:
         productos = await get_productos_data()
@@ -1235,7 +1261,7 @@ async def eliminar_producto(codigo_producto: int):
         connection.close()
 
 @app.get("/api/marcas")
-async def get_marcas():
+async def get_marcas(user: dict = Depends(require_login)):
     """Obtener listado de marcas para formularios"""
     connection = conexion_sql()
     
@@ -1373,7 +1399,7 @@ async def eliminar_producto(delete_request: DeleteProductRequest):
 # ================================================
 
 @app.get("/listado_municipios")
-async def get_municipios():
+async def get_municipios(user: dict = Depends(require_login)):
     """Obtener listado de municipios"""
     connection = conexion_sql()
     
@@ -1395,7 +1421,7 @@ async def get_municipios():
         connection.close()
 
 @app.get("/listado_departamentos")
-async def get_departamentos():
+async def get_departamentos(user: dict = Depends(require_login)):
     """Obtener listado de departamentos"""
     connection = conexion_sql()
     
@@ -1417,7 +1443,7 @@ async def get_departamentos():
         connection.close()
 
 @app.get("/listado_niveles_precio")
-async def get_niveles_precio():
+async def get_niveles_precio(user: dict = Depends(require_login)):
     """Obtener listado de niveles de precio"""
     connection = conexion_sql()
     
@@ -1444,7 +1470,7 @@ async def get_niveles_precio():
 # ================================================
 
 @app.get("/api/dashboard/totales")
-async def get_dashboard_totales():
+async def get_dashboard_totales(user: dict = Depends(require_login)):
     """Obtener totales para el dashboard"""
     connection = conexion_sql()
     
@@ -1477,7 +1503,7 @@ async def get_dashboard_totales():
         connection.close()
 
 @app.get("/api/dashboard/clientes-por-departamento")
-async def get_clientes_por_departamento():
+async def get_clientes_por_departamento(user: dict = Depends(require_login)):
     """Obtener distribución de clientes por departamento"""
     connection = conexion_sql()
     
@@ -1505,7 +1531,7 @@ async def get_clientes_por_departamento():
         connection.close()
 
 @app.get("/api/dashboard/productos-por-marca")
-async def get_productos_por_marca():
+async def get_productos_por_marca(user: dict = Depends(require_login)):
     """Obtener distribución de productos por marca"""
     connection = conexion_sql()
     
@@ -1596,81 +1622,6 @@ async def debug_usuarios():
         cursor.close()
         conn.close()
 
-@app.get("/test-db")
-async def test_database_connection():
-    """Endpoint para probar la conexión a la base de datos"""
-    print("🧪 Iniciando prueba de conexión a la base de datos...")
-    
-    conn = conexion_sql()
-    if not conn:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status": "error", 
-                "message": "No se pudo conectar a la base de datos",
-                "suggestion": "Verifique que SQL Server esté ejecutándose y los drivers estén instalados"
-            }
-        )
-    
-    try:
-        cursor = conn.cursor()
-        
-        # Probar consulta simple
-        cursor.execute("SELECT @@VERSION")
-        version = cursor.fetchone()[0]
-        
-        # Probar si existe la tabla USUARIOS
-        cursor.execute("""
-            SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES 
-            WHERE TABLE_NAME = 'USUARIOS'
-        """)
-        usuarios_table_exists = cursor.fetchone()[0] > 0
-        
-        # Contar usuarios en la tabla
-        usuarios_count = 0
-        if usuarios_table_exists:
-            cursor.execute("SELECT COUNT(*) FROM USUARIOS")
-            usuarios_count = cursor.fetchone()[0]
-        
-        result = {
-            "status": "success",
-            "message": "Conexión exitosa",
-            "database_info": {
-                "version": version[:100] + "..." if len(version) > 100 else version,
-                "usuarios_table_exists": usuarios_table_exists,
-                "usuarios_count": usuarios_count
-            }
-        }
-        
-        print("✅ Prueba de conexión exitosa")
-        return JSONResponse(content=result)
-        
-    except Exception as e:
-        print(f"❌ Error en prueba de conexión: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status": "error",
-                "message": f"Error al probar la base de datos: {str(e)}"
-            }
-        )
-    finally:
-        cursor.close()
-        conn.close()
-
-@app.get("/health")
-async def health_check():
-    """Endpoint de salud de la API"""
-    try:
-        # Probar conexión a la base de datos
-        conn = conexion_sql()
-        if conn:
-            conn.close()
-            return {"status": "healthy", "database": "connected"}
-        else:
-            return {"status": "degraded", "database": "disconnected"}
-    except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
 
 @app.get("/api/info")
 async def api_info():
