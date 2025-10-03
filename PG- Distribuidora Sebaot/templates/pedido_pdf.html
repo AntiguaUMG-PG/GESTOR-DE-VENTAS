@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: letter portrait;
+            margin: 2cm;
+        }
+        body {
+            font-family: Helvetica, sans-serif;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .company-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .document-type {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .info-section {
+            margin-bottom: 20px;
+        }
+        .info-row {
+            margin-bottom: 5px;
+        }
+        .label {
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th {
+            background-color: #f0f0f0;
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        .totals {
+            text-align: right;
+            margin-top: 20px;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 10px;
+            padding: 10px 0;
+            border-top: 1px solid #ddd;
+        }
+        .comments {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">DISTRIBUIDORA SEBAOT</div>
+        <div class="document-type">PEDIDO N° {{ pedido.numero }}</div>
+    </div>
+
+    <div class="info-section">
+        <div class="info-row">
+            <span class="label">Fecha del Pedido:</span> {{ pedido.fecha }}
+        </div>
+        <div class="info-row">
+            <span class="label">Cliente:</span> {{ pedido.cliente }}
+        </div>
+        <div class="info-row">
+            <span class="label">NIT:</span> {{ pedido.nit }}
+        </div>
+        <div class="info-row">
+            <span class="label">Dirección:</span> {{ pedido.direccion }}
+        </div>
+        <div class="info-row">
+            <span class="label">Estado:</span> {{ pedido.estado }}
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Unidad</th>
+                <th>Cantidad</th>
+                <th>Precio Unit.</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in detalles %}
+            <tr>
+                <td>{{ item.codigo }}</td>
+                <td>{{ item.producto }}</td>
+                <td>{{ item.unidad }}</td>
+                <td style="text-align: right">{{ "%.2f"|format(item.cantidad) }}</td>
+                <td style="text-align: right">Q. {{ "%.2f"|format(item.precio) }}</td>
+                <td style="text-align: right">Q. {{ "%.2f"|format(item.total) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals">
+        <div style="font-weight: bold; font-size: 14px;">
+            Total del Pedido: Q. {{ "%.2f"|format(pedido.total) }}
+        </div>
+    </div>
+
+    {% if pedido.comentarios %}
+    <div class="comments">
+        <div class="label">Comentarios:</div>
+        <div>{{ pedido.comentarios }}</div>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <div>Este documento no es un comprobante fiscal</div>
+        <div>Fecha y hora de impresión: {{ fecha_impresion }}</div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,124 @@
+/* Estilos para la ventana emergente */
+.carrito-popup {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.carrito-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 60%;
+}
+
+/* Estilos para la tabla del carrito */
+.carrito-table {
+    width: 100%;
+}
+
+.carrito-table th, .carrito-table td {
+    text-align: center;
+    padding: 10px;
+}
+
+/* Estilos para el botón de cerrar la ventana emergente */
+.close-button {
+    position: absolute;
+    top: 20px;
+    right: 10px;
+    cursor: pointer;
+    color: white;
+    font-size: 40px; /* Ajusta el tamaño del botón a tu preferencia */
+}
+
+.rounded-table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  
+  .rounded-table th, .rounded-table td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ccc; /* Add borders */
+    border-radius: 8px; /* Rounded corners */
+  }
+  
+  .rounded-table th {
+    background-color: #f2f2f2; /* Header background color */
+  }
+
+  .rounded-table tr:nth-child(even) {
+    background-color: #f2f2f2; /* Alternate row color */
+  }
+  
+  .rounded-table tr:hover {
+    background-color: #e0e0e0; /* Hover effect */
+  }
+
+  .modal {
+    display: none;
+    justify-content: center; /* Centra horizontalmente */
+    align-items: center; /* Centra verticalmente */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1;
+    text-align: center;
+  }
+  
+  
+  .modal-content {
+    background-color: #fff;
+    margin: 0; /* Quita el margen superior para centrar verticalmente */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 50%;
+    position: relative;
+  }
+  
+  .close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  
+  /* Estilos para el formulario */
+  .formulario {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .formulario label {
+    font-weight: bold;
+  }
+  
+  .formulario input, .formulario select {
+    margin: 5px 0;
+    padding: 5px;
+    width: 100%;
+  }
+  
+  .formulario button {
+    margin: 10px 0;
+    background-color: #333;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+  
