@@ -83,9 +83,8 @@ class PedidoDetalle(BaseModel):
 # ================================================
 
 def conexion_sql():
-    """Función para configurar la conexión a la base de datos SQL Server"""
+    """funcion para la configuracion de la conexión a la base de datos"""
     try:
-        # Múltiples opciones de driver para mayor compatibilidad
         drivers = [
             'ODBC Driver 17 for SQL Server',
             'ODBC Driver 13 for SQL Server', 
@@ -248,7 +247,7 @@ async def post_login_frontend(request: Request, nombre: str = Form(...), contras
             "request": request,
             "error": "Error interno del servidor. Revise los logs en la consola."
         })
-    
+    # Cerrar la sesion de usuario
 @app.get("/logout")
 async def logout(request: Request):
     """Cerrar sesión"""
@@ -257,7 +256,6 @@ async def logout(request: Request):
 
 @app.post("/api/autenticacion", response_model=AuthResponse)
 async def authenticate_api(login_data: LoginRequest):
-    """API endpoint para autenticación (JSON)"""
     try:
         result = await authenticate_user(login_data.usuario, login_data.clave)
         return AuthResponse(**result)
@@ -593,7 +591,7 @@ async def insertar_cliente(cliente_data: dict):
 
 @app.put("/actualizar_cliente")
 async def actualizar_cliente(cliente_data: dict):
-    """Actualizar cliente existente"""
+    """Actualizacion de cliente existente"""
     connection = conexion_sql()
     
     if not connection:
@@ -704,7 +702,6 @@ async def get_pedidos_data(user: dict = Depends(require_login)):
 
 @app.get("/numero_pedido")
 async def get_numero_pedido(user: dict = Depends(require_login)):
-    """Obtener siguiente número de pedido"""
     connection = conexion_sql()
     
     if not connection:
@@ -726,7 +723,6 @@ async def get_numero_pedido(user: dict = Depends(require_login)):
 
 @app.get("/buscar_productos")
 async def buscar_productos(term: str):
-    """Buscar productos para autocomplete"""
     connection = conexion_sql()
     
     if not connection:
@@ -768,7 +764,6 @@ async def buscar_productos(term: str):
 
 @app.post("/verificar_stock")
 async def verificar_stock(stock_data: dict):
-    """Verificar disponibilidad de stock"""
     connection = conexion_sql()
     
     if not connection:
@@ -807,7 +802,7 @@ async def verificar_stock(stock_data: dict):
 
 @app.post("/insertar_pedido_enc")
 async def insertar_pedido_enc(pedido_data: dict):
-    """Insertar encabezado de pedido"""
+    """Insertar el encabezado de pedido"""
     connection = conexion_sql()
     
     if not connection:
@@ -856,12 +851,8 @@ async def insertar_pedido_enc(pedido_data: dict):
 
 @app.post("/insertar_pedido_det")
 async def insertar_pedido_det(detalles_data: List[Dict[str, Any]]):
-    """Insertar detalles de pedido"""
+    """Insertar los detalles de pedido"""
     
-    print("=" * 50)
-    print(f"📦 Recibidos {len(detalles_data)} detalles")
-    print(f"Datos: {detalles_data}")
-    print("=" * 50)
     
     connection = conexion_sql()
     
@@ -907,12 +898,7 @@ async def insertar_pedido_det(detalles_data: List[Dict[str, Any]]):
 @app.post("/actualizar_stock")
 async def actualizar_stock(productos_data: List[Dict[str, Any]]):
     """Actualizar stock de productos"""
-    
-    print("=" * 50)
-    print(f"📦 Actualizando stock de {len(productos_data)} productos")
-    print(f"Datos recibidos: {productos_data}")
-    print("=" * 50)
-    
+
     connection = conexion_sql()
     
     if not connection:
@@ -998,51 +984,6 @@ async def get_detalle_pedido(numero_pedido: int):
         cursor.close()
         connection.close()
 
-@app.get("/pedidos_del_dia")
-async def get_pedidos_del_dia():
-    """Obtener pedidos del día actual"""
-    connection = conexion_sql()
-    
-    if not connection:
-        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
-    
-    try:
-        cursor = connection.cursor()
-        cursor.execute("""
-            SELECT 
-                P.NUMERO_PEDIDO,
-                P.FECHA,
-                P.NOMBRE_CLIENTE,
-                P.NIT,
-                P.DIRECCION,
-                ISNULL(P.TOTAL_DOCUMENTO, 0) as TOTAL_DOCUMENTO,
-                P.ESTADO,
-                P.COMENTARIOS
-            FROM PEDIDOS_ENC P
-            WHERE CAST(P.FECHA AS DATE) = CAST(GETDATE() AS DATE)
-            ORDER BY P.NUMERO_PEDIDO DESC
-        """)
-        pedidos = cursor.fetchall()
-        
-        json_data = [{
-            'NUMERO_PEDIDO': row[0],
-            'FECHA': row[1].strftime('%d/%m/%Y %H:%M') if row[1] else '',
-            'NOMBRE_CLIENTE': row[2],
-            'NIT': row[3],
-            'DIRECCION': row[4],
-            'TOTAL_DOCUMENTO': float(row[5]) if row[5] is not None else 0.0,
-            'ESTADO': row[6],
-            'COMENTARIOS': row[7]
-        } for row in pedidos]
-        
-        return json_data
-        
-    except Exception as e:
-        print(f"Error al obtener pedidos del día: {e}")
-        raise HTTPException(status_code=500, detail="Error al obtener pedidos del día")
-    finally:
-        cursor.close()
-        connection.close()
 
 @app.get("/imprimir_pedido/{numero_pedido}")
 async def imprimir_pedido(request: Request, numero_pedido: int):
@@ -1094,7 +1035,7 @@ async def imprimir_pedido(request: Request, numero_pedido: int):
         # Formatear fecha
         fecha_pedido = encabezado[1].strftime('%d/%m/%Y %H:%M:%S Hrs') if encabezado[1] else ''
         
-        # Preparar datos para el template
+        # Prepara datos JSON para la plantilla
         pedido_data = {
             'numero': encabezado[0],
             'fecha': fecha_pedido,
@@ -1236,7 +1177,7 @@ async def get_resumen_inventario(fecha: str = None):
             from datetime import date
             fecha = date.today().strftime('%Y-%m-%d')
 
-        # Subconsulta: total vendido por producto SOLO para la fecha indicada
+        # Subconsulta: total vendido por producto x fecha indicada
         ventas_query = """
             SELECT 
                 PD.CODIGO_PRODUCTO,
@@ -1247,7 +1188,7 @@ async def get_resumen_inventario(fecha: str = None):
             GROUP BY PD.CODIGO_PRODUCTO
         """
 
-        # Total de productos vendidos en la fecha
+        # Total de productos vendidos en la fecha seleccionada
         cursor.execute(f"SELECT COUNT(*) FROM ({ventas_query}) AS V", (fecha,))
         total_productos_vendidos = cursor.fetchone()[0]
 
@@ -1847,7 +1788,7 @@ async def get_niveles_precio(user: dict = Depends(require_login)):
             connection.close()
 
 # ================================================
-# RUTAS DE DASHBOARD
+# RUTAS PARA RESUMENES DEL DASHBOARD
 # ================================================
 
 @app.get("/api/dashboard/totales")
