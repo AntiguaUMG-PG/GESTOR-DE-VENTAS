@@ -242,11 +242,79 @@
                 transform: translateX(0);
             }
         }
+        /* Boton menu movil */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+
+        /* Barra de usuario */
+        .user-bar {
+            background: white;
+            padding: 1rem 2rem;
+            margin-bottom: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-right: 0.5rem;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            margin-left: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
     </style>
 </head>
 
 <body id="page-top">
-    <div class="sidebar">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+    <div class="sidebar" id="sidebar">
         <div class="logo">
             DISTRIBUIDORA<br>SEBAOT
         </div>
@@ -262,40 +330,50 @@
             <div class="nav-header">MODULOS</div>
             
             <!-- Módulo Clientes -->
-            <div class="nav-item" onclick="toggleSubmenu('clientesSubmenu', 'clientesChevron')">
+            <a href="/clientes" class="nav-item">
                 <div class="nav-item-content">
-                    <i class="fas fa-users"></i>
+                    <i class="fas fas fa-users"></i>
                     Clientes
                 </div>
-                <i class="fas fa-chevron-down chevron active" id="clientesChevron"></i>
-            </div>
-
-            <div class="submenu active" id="clientesSubmenu">
-                <div class="submenu-header">CLIENTES</div>
-                <a href="/clientes" class="submenu-item" style="background-color: #F3F4F6;">Gestión de Clientes</a>
-                <a href="/pedidos" class="submenu-item">Pedidos</a>
-            </div>
+            </a>
 
             <!-- Módulo Productos -->
-            <div class="nav-item" onclick="toggleSubmenu('productosSubmenu', 'productosChevron')">
+            <a href="/productos" class="nav-item">
                 <div class="nav-item-content">
-                    <i class="fas fa-box"></i>
+                    <i class="fas fas fa-box"></i>
                     Productos
                 </div>
-                <i class="fas fa-chevron-down chevron" id="productosChevron"></i>
-            </div>
-
-            <div class="submenu" id="productosSubmenu">
-                <div class="submenu-header">PRODUCTOS</div>
-                <a href="/productos" class="submenu-item">Gestión de Productos</a>
-            </div>
-
+            </a>
             <!-- Módulo Pedidos -->
             <a href="/pedidos" class="nav-item">
                 <div class="nav-item-content">
                     <i class="fas fa-shopping-cart"></i>
                     Pedidos
                 </div>
+            </a>
+            <div class="nav-header">REPORTES</div>
+            <a href="/reporte_inventario" class="nav-item">
+                <div class="nav-item-content">
+                    <i class="fas fa-chart-line"></i>
+                    Reporte de Inventario
+                </div>
+            </a>
+        </div>
+        <div style="margin-top: auto; padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <div class="user-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; font-weight: 500;">{{ usuario or 'Usuario' }}</div>
+                    <div style="font-size: 0.75rem; opacity: 0.8;">
+                        {% if perfil == 1 %}Administrador{% elif perfil == 2 %}Vendedor{% else %}Usuario{% endif %}
+                    </div>
+                </div>
+            </div>
+            <a href="/logout" onclick="return confirm('¿Está seguro que desea cerrar sesión?')" 
+                style="display: block; color: white; text-decoration: none; padding: 0.5rem; background: rgba(255,255,255,0.1); border-radius: 0.25rem; text-align: center;">
+                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
             </a>
         </div>
     </div>
@@ -595,6 +673,24 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
+        // Toggle del menú en móvil
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('show');
+        }
+
+        // Cerrar sidebar al hacer click fuera en móvil
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+            
+            if (window.innerWidth <= 768) {
+                if (!sidebar.contains(event.target) && !menuBtn.contains(event.target)) {
+                    sidebar.classList.remove('show');
+                }
+            }
+        });
+
         // Variables globales
         let dataTable;
         let clientesData = [];

@@ -194,7 +194,7 @@
             background: white;
             border-radius: 0.5rem;
             padding: 1rem;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 2px rgba(134, 65, 65, 0.05);
             height: 300px;
             position: relative;
         }
@@ -332,39 +332,32 @@
             <div class="nav-header">MODULOS</div>
             
             <!-- Módulo Clientes -->
-            <div class="nav-item" onclick="toggleSubmenu('clientesSubmenu', 'clientesChevron')">
+            <a href="/clientes" class="nav-item">
                 <div class="nav-item-content">
-                    <i class="fas fa-users"></i>
+                    <i class="fas fas fa-users"></i>
                     Clientes
                 </div>
-                <i class="fas fa-chevron-down chevron" id="clientesChevron"></i>
-            </div>
-
-            <div class="submenu" id="clientesSubmenu">
-                <div class="submenu-header">CLIENTES</div>
-                <a href="/clientes" class="submenu-item">Clientes</a>
-                <a href="/pedidos" class="submenu-item">Pedidos</a>
-            </div>
+            </a>
 
             <!-- Módulo Productos -->
-            <div class="nav-item" onclick="toggleSubmenu('productosSubmenu', 'productosChevron')">
+            <a href="/productos" class="nav-item">
                 <div class="nav-item-content">
-                    <i class="fas fa-box"></i>
+                    <i class="fas fas fa-box"></i>
                     Productos
                 </div>
-                <i class="fas fa-chevron-down chevron" id="productosChevron"></i>
-            </div>
-
-            <div class="submenu" id="productosSubmenu">
-                <div class="submenu-header">PRODUCTOS</div>
-                <a href="/productos" class="submenu-item">Productos</a>
-            </div>
-
+            </a>
             <!-- Módulo Pedidos -->
             <a href="/pedidos" class="nav-item">
                 <div class="nav-item-content">
                     <i class="fas fa-shopping-cart"></i>
                     Pedidos
+                </div>
+            </a>
+            <div class="nav-header">REPORTES</div>
+            <a href="/reporte_inventario" class="nav-item">
+                <div class="nav-item-content">
+                    <i class="fas fa-chart-line"></i>
+                    Reporte de Inventario
                 </div>
             </a>
         </div>

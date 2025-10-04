@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: letter portrait;
+            margin: 1.8cm;
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 10px;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .company-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .document-title {
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .sub-info {
+            font-size: 10px;
+            color: #555;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 8px;
+        }
+
+        th {
+            background-color: #f0f0f0;
+            padding: 6px;
+            text-align: center;
+            border: 1px solid #ccc;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 6px;
+            border: 1px solid #ddd;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-danger {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+
+        .text-success {
+            color: #388e3c;
+            font-weight: bold;
+        }
+
+        .summary {
+            margin-top: 20px;
+            font-size: 10px;
+            border-top: 2px solid #333;
+            padding-top: 10px;
+        }
+
+        .summary table {
+            width: 60%;
+            margin: 0 auto;
+            border: none;
+        }
+
+        .summary td {
+            padding: 4px;
+            border: none;
+        }
+
+        .summary .label {
+            font-weight: bold;
+            text-align: right;
+            width: 70%;
+        }
+
+        .summary .value {
+            text-align: left;
+            width: 30%;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 9px;
+            color: #666;
+            padding-top: 8px;
+            border-top: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="company-name">DISTRIBUIDORA SEBAOT</div>
+        <div class="document-title">Reporte de Inventario y Pedidos</div>
+        <div class="sub-info">Fecha del reporte: {{ fecha }}</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Marca</th>
+                <th>Unidad</th>
+                <th>Inventario</th>
+                <th>Vendido</th>
+                <th>Faltante</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in datos %}
+            <tr>
+                <td>{{ item.codigo_producto }}</td>
+                <td>{{ item.nombre_producto }}</td>
+                <td>{{ item.marca }}</td>
+                <td>{{ item.unidad_medida }}</td>
+                <td class="text-right">{{ item.inventario_actual }}</td>
+                <td class="text-right">{{ item.cantidad_vendida }}</td>
+                <td class="text-right">{{ item.faltante }}</td>
+                <td class="text-center {% if item.estado == 'INSUFICIENTE' %}text-danger{% else %}text-success{% endif %}">
+                    {{ item.estado }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="summary">
+        <table>
+            <tr>
+                <td class="label">Total Productos con Ventas:</td>
+                <td class="value">{{ resumen.total_productos_vendidos }}</td>
+            </tr>
+            <tr>
+                <td class="label">Con Inventario Suficiente:</td>
+                <td class="value text-success">{{ resumen.productos_con_inventario_suficiente }}</td>
+            </tr>
+            <tr>
+                <td class="label">Con Inventario Insuficiente:</td>
+                <td class="value text-danger">{{ resumen.productos_con_inventario_insuficiente }}</td>
+            </tr>
+            <tr>
+                <td class="label">Unidades Faltantes Totales:</td>
+                <td class="value text-danger">{{ resumen.total_unidades_faltantes }}</td>
+            </tr>
+            <tr>
+                <td class="label">Porcentaje de Cobertura:</td>
+                <td class="value">{{ resumen.porcentaje_cobertura }}%</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        Reporte generado automáticamente por el sistema — Distribuidora Sebaot
+    </div>
+</body>
+</html>

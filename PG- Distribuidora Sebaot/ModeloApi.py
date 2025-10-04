@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 
 import pyodbc
 import os
-from datetime import datetime
+from datetime import datetime, date
 
 app = FastAPI(title="Gestor de Pedidos", version="1.0.0")
 app.add_middleware(SessionMiddleware, secret_key="Natha0908I45")
@@ -185,6 +185,15 @@ async def get_productos_page(request: Request, user: dict = Depends(require_logi
         return templates.TemplateResponse("error.html", {
             "request": request, 
             "error": "Error al cargar los productos"
+        })
+    
+@app.get("/reporte_inventario")
+async def get_login(request: Request, user: dict = Depends(require_login)):
+    """Página Principal"""
+    return templates.TemplateResponse("reporte_inventario.html", {
+        "request": request,
+        "usuario": user.get("nombre_usuario"),
+        "perfil": user.get("codigo_perfil")
         })
 
 # ================================================
@@ -989,6 +998,52 @@ async def get_detalle_pedido(numero_pedido: int):
         cursor.close()
         connection.close()
 
+@app.get("/pedidos_del_dia")
+async def get_pedidos_del_dia():
+    """Obtener pedidos del día actual"""
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT 
+                P.NUMERO_PEDIDO,
+                P.FECHA,
+                P.NOMBRE_CLIENTE,
+                P.NIT,
+                P.DIRECCION,
+                ISNULL(P.TOTAL_DOCUMENTO, 0) as TOTAL_DOCUMENTO,
+                P.ESTADO,
+                P.COMENTARIOS
+            FROM PEDIDOS_ENC P
+            WHERE CAST(P.FECHA AS DATE) = CAST(GETDATE() AS DATE)
+            ORDER BY P.NUMERO_PEDIDO DESC
+        """)
+        pedidos = cursor.fetchall()
+        
+        json_data = [{
+            'NUMERO_PEDIDO': row[0],
+            'FECHA': row[1].strftime('%d/%m/%Y %H:%M') if row[1] else '',
+            'NOMBRE_CLIENTE': row[2],
+            'NIT': row[3],
+            'DIRECCION': row[4],
+            'TOTAL_DOCUMENTO': float(row[5]) if row[5] is not None else 0.0,
+            'ESTADO': row[6],
+            'COMENTARIOS': row[7]
+        } for row in pedidos]
+        
+        return json_data
+        
+    except Exception as e:
+        print(f"Error al obtener pedidos del día: {e}")
+        raise HTTPException(status_code=500, detail="Error al obtener pedidos del día")
+    finally:
+        cursor.close()
+        connection.close()
+
 @app.get("/imprimir_pedido/{numero_pedido}")
 async def imprimir_pedido(request: Request, numero_pedido: int):
     """Generar vista PDF del pedido"""
@@ -1079,6 +1134,332 @@ async def imprimir_pedido(request: Request, numero_pedido: int):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error al generar PDF: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
+# ================================================
+# RUTAS PARA REPORTE DE INVENTARIO Y PEDIDOS
+# ================================================
+
+@app.get("/reporte/inventario-vs-pedidos")
+async def get_reporte_inventario_pedidos(fecha: str = None):
+    """
+    Comparar productos vendidos en el día vs inventario disponible
+    Parámetro fecha opcional en formato YYYY-MM-DD (por defecto hoy)
+    """
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Si no se proporciona fecha, usar la fecha actual
+        if not fecha:
+            from datetime import date
+            fecha = date.today().strftime('%Y-%m-%d')
+        
+        # Consulta para obtener productos vendidos en el día y comparar con inventario
+        cursor.execute("""
+            SELECT 
+                P.CODIGO_PRODUCTO,
+                P.NOMBRE_PRODUCTO,
+                P.UNIDAD_MEDIDA,
+                M.NOMBRE_MARCA,
+                ISNULL(P.EXISTENCIA, 0) AS INVENTARIO_ACTUAL,
+                V.CANTIDAD_VENDIDA,
+                ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0) AS INVENTARIO_RESULTANTE,
+                CASE 
+                    WHEN (ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0)) < 0
+                    THEN ABS(ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0))
+                    ELSE 0 
+                END AS FALTANTE,
+                PR.PRECIO
+            FROM PRODUCTOS P
+            INNER JOIN MARCAS M ON P.MARCA = M.CODIGO_MARCA
+            LEFT JOIN PRECIOS PR ON P.CODIGO_PRODUCTO = PR.CODIGO_PRODUCTO
+            -- tabla derivada con ventas agregadas SOLO para la fecha dada
+            INNER JOIN (
+                SELECT 
+                    PD.CODIGO_PRODUCTO,
+                    ISNULL(SUM(PD.CANTIDAD), 0) AS CANTIDAD_VENDIDA
+                FROM PEDIDOS_DET PD
+                INNER JOIN PEDIDOS_ENC PE ON PD.NUMERO_PEDIDO = PE.NUMERO_PEDIDO
+                WHERE CONVERT(DATE, PE.FECHA) = ?
+                GROUP BY PD.CODIGO_PRODUCTO
+            ) AS V ON P.CODIGO_PRODUCTO = V.CODIGO_PRODUCTO
+            ORDER BY 
+                CASE WHEN (ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0)) < 0 THEN 0 ELSE 1 END,
+                P.NOMBRE_PRODUCTO
+        """, (fecha,))
+        
+        resultados = cursor.fetchall()
+        
+        json_data = [{
+            'codigo_producto': row[0],
+            'nombre_producto': row[1],
+            'unidad_medida': row[2],
+            'marca': row[3],
+            'inventario_actual': int(row[4]),
+            'cantidad_vendida': int(row[5]),
+            'inventario_resultante': int(row[6]),
+            'faltante': int(row[7]),
+            'precio': float(row[8]) if row[8] is not None else 0.0,
+            'estado': 'INSUFICIENTE' if row[7] > 0 else 'SUFICIENTE'
+        } for row in resultados]
+        
+        return json_data
+        
+    except Exception as e:
+        print(f"Error al obtener reporte: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener reporte: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.get("/reporte/resumen-inventario")
+async def get_resumen_inventario(fecha: str = None):
+    """
+    Resumen estadístico del inventario vs pedidos del día
+    """
+    connection = conexion_sql()
+
+    if not connection:
+        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
+
+    try:
+        cursor = connection.cursor()
+
+        if not fecha:
+            from datetime import date
+            fecha = date.today().strftime('%Y-%m-%d')
+
+        # Subconsulta: total vendido por producto SOLO para la fecha indicada
+        ventas_query = """
+            SELECT 
+                PD.CODIGO_PRODUCTO,
+                ISNULL(SUM(PD.CANTIDAD), 0) AS CANTIDAD_VENDIDA
+            FROM PEDIDOS_DET PD
+            INNER JOIN PEDIDOS_ENC PE ON PD.NUMERO_PEDIDO = PE.NUMERO_PEDIDO
+            WHERE CONVERT(DATE, PE.FECHA) = ?
+            GROUP BY PD.CODIGO_PRODUCTO
+        """
+
+        # Total de productos vendidos en la fecha
+        cursor.execute(f"SELECT COUNT(*) FROM ({ventas_query}) AS V", (fecha,))
+        total_productos_vendidos = cursor.fetchone()[0]
+
+        # Productos con inventario insuficiente
+        cursor.execute(f"""
+            SELECT COUNT(*)
+            FROM PRODUCTOS P
+            INNER JOIN ({ventas_query}) AS V ON P.CODIGO_PRODUCTO = V.CODIGO_PRODUCTO
+            WHERE (ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0)) < 0
+        """, (fecha,))
+        productos_insuficientes = cursor.fetchone()[0]
+
+        # Total de unidades faltantes
+        cursor.execute(f"""
+            SELECT 
+                ISNULL(SUM(
+                    CASE 
+                        WHEN (ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0)) < 0 
+                        THEN ABS(ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0))
+                        ELSE 0 
+                    END
+                ), 0)
+            FROM PRODUCTOS P
+            INNER JOIN ({ventas_query}) AS V ON P.CODIGO_PRODUCTO = V.CODIGO_PRODUCTO
+        """, (fecha,))
+        total_unidades_faltantes = cursor.fetchone()[0] or 0
+
+        # Total de pedidos del día
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM PEDIDOS_ENC 
+            WHERE CONVERT(DATE, FECHA) = ?
+        """, (fecha,))
+        total_pedidos = cursor.fetchone()[0]
+
+        # Armar respuesta
+        return {
+            'fecha': fecha,
+            'total_productos_vendidos': total_productos_vendidos,
+            'productos_con_inventario_suficiente': total_productos_vendidos - productos_insuficientes,
+            'productos_con_inventario_insuficiente': productos_insuficientes,
+            'total_unidades_faltantes': int(total_unidades_faltantes),
+            'total_pedidos_dia': total_pedidos,
+            'porcentaje_cobertura': round(
+                ((total_productos_vendidos - productos_insuficientes) / total_productos_vendidos * 100)
+                if total_productos_vendidos > 0 else 100, 2
+            )
+        }
+
+    except Exception as e:
+        print(f"Error al obtener resumen: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener resumen: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.get("/reporte/productos-criticos")
+async def get_productos_criticos(limite: int = 10):
+    """
+    Obtener productos con inventario más bajo o crítico
+    """
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        
+        cursor.execute(f"""
+            SELECT TOP {limite}
+                P.CODIGO_PRODUCTO,
+                P.NOMBRE_PRODUCTO,
+                P.UNIDAD_MEDIDA,
+                M.NOMBRE_MARCA,
+                ISNULL(P.EXISTENCIA, 0) as EXISTENCIA
+            FROM PRODUCTOS P
+            INNER JOIN MARCAS M ON P.MARCA = M.CODIGO_MARCA
+            WHERE ISNULL(P.EXISTENCIA, 0) <= 10
+            ORDER BY P.EXISTENCIA ASC
+        """)
+        
+        resultados = cursor.fetchall()
+        
+        return [{
+            'codigo_producto': row[0],
+            'nombre_producto': row[1],
+            'unidad_medida': row[2],
+            'marca': row[3],
+            'existencia': int(row[4]),
+            'nivel_alerta': 'CRITICO' if row[4] <= 5 else 'BAJO'
+        } for row in resultados]
+        
+    except Exception as e:
+        print(f"Error al obtener productos críticos: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener productos críticos: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.get("/imprimir_reporte_inventario")
+async def imprimir_reporte_inventario(request: Request, fecha: str = None):
+    """
+    Genera la vista HTML para imprimir el reporte de inventario del día seleccionado
+    """
+
+    # Usar fecha actual si no se proporciona
+    if not fecha:
+        fecha = date.today().strftime('%Y-%m-%d')
+    
+    connection = conexion_sql()
+    if not connection:
+        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor()
+
+        # ------------------- Resumen de inventario
+        cursor.execute("""
+        WITH ProductosVendidos AS (
+            SELECT
+                P.CODIGO_PRODUCTO,
+                P.NOMBRE_PRODUCTO,
+                P.UNIDAD_MEDIDA,
+                P.MARCA,
+                ISNULL(P.EXISTENCIA,0) AS EXISTENCIA,
+                ISNULL(SUM(PD.CANTIDAD),0) AS CANTIDAD_VENDIDA
+            FROM PRODUCTOS P
+            LEFT JOIN PEDIDOS_DET PD ON P.CODIGO_PRODUCTO = PD.CODIGO_PRODUCTO
+            LEFT JOIN PEDIDOS_ENC PE ON PD.NUMERO_PEDIDO = PE.NUMERO_PEDIDO
+                AND CONVERT(DATE, PE.FECHA) = ?
+            GROUP BY P.CODIGO_PRODUCTO, P.NOMBRE_PRODUCTO, P.UNIDAD_MEDIDA, P.MARCA, P.EXISTENCIA
+        )
+        SELECT
+            COUNT(*) AS total_productos_vendidos,
+            SUM(CASE WHEN EXISTENCIA - CANTIDAD_VENDIDA >= 0 THEN 1 ELSE 0 END) AS productos_suficientes,
+            SUM(CASE WHEN EXISTENCIA - CANTIDAD_VENDIDA < 0 THEN 1 ELSE 0 END) AS productos_insuficientes,
+            SUM(CASE WHEN EXISTENCIA - CANTIDAD_VENDIDA < 0 THEN ABS(EXISTENCIA - CANTIDAD_VENDIDA) ELSE 0 END) AS total_unidades_faltantes
+        FROM ProductosVendidos
+        """, (fecha,))
+        
+        resumen = cursor.fetchone()
+        resumen_data = {
+            'total_productos_vendidos': resumen[0],
+            'productos_con_inventario_suficiente': resumen[1],
+            'productos_con_inventario_insuficiente': resumen[2],
+            'total_unidades_faltantes': int(resumen[3])
+        }
+
+        # ------------------- Detalle
+        cursor.execute("""
+        WITH ProductosVendidos AS (
+            SELECT
+                P.CODIGO_PRODUCTO,
+                P.NOMBRE_PRODUCTO,
+                P.UNIDAD_MEDIDA,
+                M.NOMBRE_MARCA AS MARCA,
+                ISNULL(P.EXISTENCIA,0) AS INVENTARIO_ACTUAL,
+                SUM(PD.CANTIDAD) AS CANTIDAD_VENDIDA
+            FROM PRODUCTOS P
+            INNER JOIN MARCAS M ON P.MARCA = M.CODIGO_MARCA
+            INNER JOIN PEDIDOS_DET PD ON P.CODIGO_PRODUCTO = PD.CODIGO_PRODUCTO
+            INNER JOIN PEDIDOS_ENC PE ON PD.NUMERO_PEDIDO = PE.NUMERO_PEDIDO
+                AND CONVERT(DATE, PE.FECHA) = ?
+            GROUP BY P.CODIGO_PRODUCTO, P.NOMBRE_PRODUCTO, P.UNIDAD_MEDIDA, M.NOMBRE_MARCA, P.EXISTENCIA
+        )
+        SELECT
+            CODIGO_PRODUCTO,
+            NOMBRE_PRODUCTO,
+            UNIDAD_MEDIDA,
+            MARCA,
+            INVENTARIO_ACTUAL,
+            CANTIDAD_VENDIDA,
+            INVENTARIO_ACTUAL - CANTIDAD_VENDIDA AS INVENTARIO_RESULTANTE,
+            CASE WHEN INVENTARIO_ACTUAL - CANTIDAD_VENDIDA < 0 THEN ABS(INVENTARIO_ACTUAL - CANTIDAD_VENDIDA) ELSE 0 END AS FALTANTE
+        FROM ProductosVendidos
+        ORDER BY FALTANTE DESC, NOMBRE_PRODUCTO
+        """, (fecha,))
+
+        resultados = cursor.fetchall()
+        productos_lista = []
+        for row in resultados:
+            productos_lista.append({
+                'codigo_producto': row[0],
+                'nombre_producto': row[1],
+                'unidad_medida': row[2],
+                'marca': row[3],
+                'inventario_actual': int(row[4]),
+                'cantidad_vendida': int(row[5]),
+                'inventario_resultante': int(row[6]),
+                'faltante': int(row[7]),
+                'estado': 'INSUFICIENTE' if row[7] > 0 else 'SUFICIENTE'
+            })
+
+        fecha_impresion = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+
+
+        # Renderizar template del reporte
+        return templates.TemplateResponse("reporte_inv_pdf.html", {
+            "request": request,
+            "fecha": fecha,
+            "datos": productos_lista,
+            "resumen": resumen_data,
+            "fecha_impresion": fecha_impresion
+        })
+
+    except Exception as e:
+        print(f"Error al generar reporte de inventario: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error al generar reporte de inventario: {str(e)}")
     finally:
         cursor.close()
         connection.close()
