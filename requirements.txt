@@ -1,7 +1,8 @@
 fastapi
 uvicorn
-pydantic
-starlette
+pyodbc
 itsdangerous
 jinja2
-pyodbc
+pydantic
+starlette
+python-multipart
