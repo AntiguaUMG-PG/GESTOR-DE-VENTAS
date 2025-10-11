@@ -1966,8 +1966,8 @@ async def api_info():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "main:app",  # Asume que el archivo se llama main.py
-        host="0.0.0.0",
+        "ModeloApi:app",  # Asume que el archivo se llama main.py
+        host="127.0.0.1",
         port=8000,
         reload=True,
         log_level="info"
