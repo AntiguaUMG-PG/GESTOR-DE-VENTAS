@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Distribuidora Sebaot - Clientes</title>
+
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Nunito:200,300,400,600,700,800,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- DataTables -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <style>
+        :root {
+            --sidebar-width: 240px;
+            --max-content-width: 1200px;
+            --primary-blue: rgb(82, 113, 255);
+            --hover-blue: rgb(72, 103, 245);
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--primary-blue);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            color: white;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .logo {
+            text-align: center;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            font-weight: bold;
+            font-size: 1.25rem;
+            line-height: 1.2;
+        }
+
+        /* Layout principal */
+        #wrapper {
+            min-height: 100vh;
+            margin-left: var(--sidebar-width);
+        }
+
+        #content-wrapper {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #content {
+            flex: 1;
+            max-width: var(--max-content-width);
+            margin: 0 auto;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        /* Navegación */
+        .nav-section {
+            padding: 0 1rem;
+        }
+
+        .nav-header {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            padding: 0.5rem 0;
+            margin-top: 1rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            color: white;
+            text-decoration: none;
+            border-radius: 0.25rem;
+            margin-bottom: 0.25rem;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background-color: var(--hover-blue);
+            color: white;
+            text-decoration: none;
+        }
+
+        .nav-item-content {
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-item-content i {
+            margin-right: 0.75rem;
+            width: 20px;
+        }
+
+        /* Submenus */
+        .submenu {
+            background-color: white;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            display: none;
+        }
+
+        .submenu.active {
+            display: block;
+        }
+
+        .submenu-header {
+            color: #9CA3AF;
+            font-size: 0.875rem;
+            padding: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .submenu-item {
+            display: block;
+            padding: 0.5rem;
+            color: #374151;
+            text-decoration: none;
+            border-radius: 0.25rem;
+        }
+
+        .submenu-item:hover {
+            background-color: #F3F4F6;
+        }
+
+        .chevron {
+            transition: transform 0.3s ease;
+        }
+
+        .chevron.active {
+            transform: rotate(180deg);
+        }
+
+        /* Componentes */
+        .card {
+            background-color: #fff;
+            border: none;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.15rem 1.75rem rgba(0, 0, 0, 0.15);
+        }
+
+        /* DataTables personalizado */
+        #clientesTable_wrapper {
+            padding: 1rem;
+        }
+
+        .dataTables_length select {
+            padding: 0.25rem 0.5rem;
+            margin: 0 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .dataTables_filter input {
+            padding: 0.25rem 0.5rem;
+            margin-left: 0.5rem;
+            border-radius: 0.25rem;
+            border: 1px solid #dee2e6;
+        }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+        }
+
+        .spinner-border {
+            color: var(--primary-blue);
+        }
+
+        /* Error message */
+        .error-message {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c00;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            margin: 1rem;
+            text-align: center;
+        }
+
+        /* Success message */
+        .success-message {
+            background: #efe;
+            border: 1px solid #cfc;
+            color: #060;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            margin: 1rem;
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            #wrapper {
+                margin-left: 0;
+            }
+            
+            #content {
+                padding: 1rem;
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+        }
+        /* Boton menu movil */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+
+        /* Barra de usuario */
+        .user-bar {
+            background: white;
+            padding: 1rem 2rem;
+            margin-bottom: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-right: 0.5rem;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            margin-left: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+
+<body id="page-top">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+    <div class="sidebar" id="sidebar">
+        <div class="logo">
+            DISTRIBUIDORA<br>SEBAOT
+        </div>
+
+        <div class="nav-section">
+            <a href="/index" class="nav-item">
+                <div class="nav-item-content">
+                    <i class="fas fa-home"></i>
+                    Principal
+                </div>
+            </a>
+
+            <div class="nav-header">MODULOS</div>
+            
+            <!-- Módulo Clientes -->
+            <a href="/clientes" class="nav-item">
+                <div class="nav-item-content">
+                    <i class="fas fas fa-users"></i>
+                    Clientes
+                </div>
+            </a>
+
+            <!-- Módulo Productos -->
+            <a href="/productos" class="nav-item">
+                <div class="nav-item-content">
+                    <i class="fas fas fa-box"></i>
+                    Productos
+                </div>
+            </a>
+            <!-- Módulo Pedidos -->
+            <a href="/pedidos" class="nav-item">
+                <div class="nav-item-content">
+                    <i class="fas fa-shopping-cart"></i>
+                    Pedidos
+                </div>
+            </a>
+            <div class="nav-header">REPORTES</div>
+            <a href="/reporte_inventario" class="nav-item">
+                <div class="nav-item-content">
+                    <i class="fas fa-chart-line"></i>
+                    Reporte de Inventario
+                </div>
+            </a>
+        </div>
+        <div style="margin-top: auto; padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <div class="user-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; font-weight: 500;">{{ usuario or 'Usuario' }}</div>
+                    <div style="font-size: 0.75rem; opacity: 0.8;">
+                        {% if perfil == 1 %}Administrador{% elif perfil == 2 %}Vendedor{% else %}Usuario{% endif %}
+                    </div>
+                </div>
+            </div>
+            <a href="/logout" onclick="return confirm('¿Está seguro que desea cerrar sesión?')" 
+                style="display: block; color: white; text-decoration: none; padding: 0.5rem; background: rgba(255,255,255,0.1); border-radius: 0.25rem; text-align: center;">
+                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </a>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div id="wrapper">
+        <div id="content-wrapper" class="d-flex flex-column">
+            <div id="content">
+                <div class="container-fluid">
+                    <!-- Page Heading -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h1 class="h3 text-gray-800">Gestión de Clientes</h1>
+                            <p class="text-muted">Administra la información de tus clientes</p>
+                        </div>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalInsertar">
+                            <i class="fas fa-plus"></i> Nuevo Cliente
+                        </button>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <!-- Lista de Clientes -->
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">
+                                        <i class="fas fa-users"></i> Lista de Clientes
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Loading spinner -->
+                                    <div id="loadingSpinner" class="loading-spinner">
+                                        <div class="spinner-border" role="status">
+                                            <span class="visually-hidden">Cargando...</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Error message -->
+                                    <div id="errorMessage" class="error-message" style="display: none;">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Error al cargar los clientes. 
+                                        <button class="btn btn-sm btn-outline-danger ms-2" onclick="recargarClientes()">
+                                            <i class="fas fa-sync"></i> Reintentar
+                                        </button>
+                                    </div>
+
+                                    <!-- Tabla de clientes -->
+                                    <div class="table-responsive" id="clientesTableContainer" style="display: none;">
+                                        <table id="clientesTable" class="table table-bordered table-hover">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Código</th>
+                                                    <th>Nombre</th>
+                                                    <th>Negocio</th>
+                                                    <th>NIT</th>
+                                                    <th>Teléfono</th>
+                                                    <th>Municipio</th>
+                                                    <th>Departamento</th>
+                                                    <th>Saldo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Los datos se cargan dinámicamente -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <!-- Detalles del Cliente -->
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">
+                                        <i class="fas fa-user-circle"></i> Detalles del Cliente
+                                    </h6>
+                                </div>
+                                <div class="card-body" id="clienteDetalle">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-mouse-pointer fa-3x mb-3"></i>
+                                        <p>Selecciona un cliente de la lista para ver sus detalles</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Estadísticas rápidas -->
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">
+                                        <i class="fas fa-chart-bar"></i> Estadísticas
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <div class="border-end">
+                                                <div class="h4 font-weight-bold text-primary" id="totalClientes">--</div>
+                                                <div class="small text-muted">Total Clientes</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="h4 font-weight-bold text-success" id="clientesActivos">--</div>
+                                            <div class="small text-muted">Activos</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="sticky-footer bg-white">
+                <div class="container my-auto">
+                    <div class="copyright text-center my-auto">
+                        <span>Copyright © Distribuidora Sebaot 2024</span>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Modal Insertar -->
+    <div class="modal fade" id="modalInsertar" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-plus"></i> Nuevo Cliente
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formInsertar">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="Nombre" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre del Negocio <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="Nombre_Negocio" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">NIT</label>
+                                    <input type="text" class="form-control" name="NIT" placeholder="Ej: 123456-7">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Teléfono</label>
+                                    <input type="text" class="form-control" name="Telefono" placeholder="Ej: 12345678">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <textarea class="form-control" name="Direccion" rows="2" placeholder="Dirección completa del cliente"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Municipio <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="Municipio" required>
+                                        <option value="">Seleccione un municipio</option>
+                                        <!-- Se llena dinámicamente -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Departamento <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="Departamento" required>
+                                        <option value="">Seleccione un departamento</option>
+                                        <!-- Se llena dinámicamente -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nivel de Precio <span class="text-danger">*</span></label>
+                            <select class="form-select" name="Nivel_Precio" required>
+                                <option value="">Seleccione un nivel de precio</option>
+                                <!-- Se llena dinámicamente -->
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="submit" form="formInsertar" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cliente
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar -->
+    <div class="modal fade" id="modalEditar" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-edit"></i> Editar Cliente
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditar">
+                        <input type="hidden" name="Codigo">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="Nombre" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre del Negocio <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="Nombre_Negocio" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">NIT</label>
+                                    <input type="text" class="form-control" name="NIT" placeholder="Ej: 123456-7">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Teléfono</label>
+                                    <input type="text" class="form-control" name="Telefono" placeholder="Ej: 12345678">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <textarea class="form-control" name="Direccion" rows="2" placeholder="Dirección completa del cliente"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Municipio <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="Municipio" required>
+                                        <option value="">Seleccione un municipio</option>
+                                        <!-- Se llena dinámicamente -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Departamento <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="Departamento" required>
+                                        <option value="">Seleccione un departamento</option>
+                                        <!-- Se llena dinámicamente -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nivel de Precio <span class="text-danger">*</span></label>
+                            <select class="form-select" name="Nivel_Precio" required>
+                                <option value="">Seleccione un nivel de precio</option>
+                                <!-- Se llena dinámicamente -->
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="submit" form="formEditar" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        // Toggle del menú en móvil
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('show');
+        }
+
+        // Cerrar sidebar al hacer click fuera en móvil
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+            
+            if (window.innerWidth <= 768) {
+                if (!sidebar.contains(event.target) && !menuBtn.contains(event.target)) {
+                    sidebar.classList.remove('show');
+                }
+            }
+        });
+
+        // Variables globales
+        let dataTable;
+        let clientesData = [];
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🚀 Inicializando página de clientes...');
+            
+            // Cargar datos iniciales
+            cargarClientes();
+            cargarDropdowns();
+            
+            // Configurar event listeners para formularios
+            setupFormularios();
+        });
+
+        // Función principal para cargar clientes
+        async function cargarClientes() {
+            console.log('📊 Cargando clientes desde la API...');
+            
+            try {
+                mostrarLoading(true);
+                
+                const response = await fetch('/listado_clientes');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                clientesData = await response.json();
+                console.log(`✅ Clientes cargados: ${clientesData.length} registros`);
+                
+                // Actualizar estadísticas
+                actualizarEstadisticas();
+                
+                // Inicializar DataTable
+                inicializarDataTable();
+                
+                mostrarLoading(false);
+                
+            } catch (error) {
+                console.error('❌ Error al cargar clientes:', error);
+                mostrarError(true);
+                mostrarLoading(false);
+            }
+        }
+
+        // Inicializar DataTable
+        function inicializarDataTable() {
+            // Destruir tabla existente si existe
+            if (dataTable) {
+                dataTable.destroy();
+            }
+
+            dataTable = $('#clientesTable').DataTable({
+                data: clientesData,
+                columns: [
+                    { data: 'Codigo' },
+                    { data: 'Nombre' },
+                    { data: 'Nombre_Negocio' },
+                    { data: 'NIT' },
+                    { data: 'Telefono' },
+                    { data: 'Municipio' },
+                    { data: 'Departamento' },
+                    { 
+                        data: 'Saldo',
+                        render: function(data) {
+                            return `Q. ${parseFloat(data || 0).toFixed(2)}`;
+                        }
+                    }
+                ],
+                pageLength: 10,
+                lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
+                language: {
+                    processing: "Procesando...",
+                    search: "Buscar:",
+                    lengthMenu: "Mostrar _MENU_ registros",
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ clientes",
+                    infoEmpty: "Mostrando 0 a 0 de 0 clientes",
+                    infoFiltered: "(filtrado de _MAX_ clientes totales)",
+                    paginate: {
+                        first: "Primero",
+                        last: "Último",
+                        next: "Siguiente",
+                        previous: "Anterior"
+                    },
+                    zeroRecords: "No se encontraron clientes",
+                    emptyTable: "No hay clientes disponibles"
+                },
+                order: [[1, 'asc']], // Ordenar por nombre
+                responsive: true,
+                dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rt<"row"<"col-sm-6"i><"col-sm-6"p>>',
+            });
+
+            // Event listener para seleccionar fila
+            $('#clientesTable tbody').on('click', 'tr', function() {
+                const data = dataTable.row(this).data();
+                if (data) {
+                    mostrarDetallesCliente(data);
+                    // Resaltar fila seleccionada
+                    $('#clientesTable tbody tr').removeClass('table-active');
+                    $(this).addClass('table-active');
+                }
+            });
+
+            // Mostrar la tabla
+            document.getElementById('clientesTableContainer').style.display = 'block';
+        }
+
+        // Mostrar/ocultar loading
+        function mostrarLoading(mostrar) {
+            const spinner = document.getElementById('loadingSpinner');
+            const tabla = document.getElementById('clientesTableContainer');
+            
+            if (mostrar) {
+                spinner.style.display = 'flex';
+                tabla.style.display = 'none';
+            } else {
+                spinner.style.display = 'none';
+            }
+        }
+
+        // Mostrar/ocultar error
+        function mostrarError(mostrar) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.style.display = mostrar ? 'block' : 'none';
+        }
+
+        // Recargar clientes
+        function recargarClientes() {
+            mostrarError(false);
+            cargarClientes();
+        }
+
+        // Actualizar estadísticas
+        function actualizarEstadisticas() {
+            const total = clientesData.length;
+            const activos = clientesData.filter(c => c.Saldo >= 0).length;
+            
+            document.getElementById('totalClientes').textContent = total;
+            document.getElementById('clientesActivos').textContent = activos;
+        }
+
+        // Mostrar detalles del cliente
+        function mostrarDetallesCliente(cliente) {
+            const detalleDiv = document.getElementById('clienteDetalle');
+            const saldo = parseFloat(cliente.Saldo || 0);
+            const saldoColor = saldo >= 0 ? 'success' : 'danger';
+            
+            detalleDiv.innerHTML = `
+                <div class="text-center mb-3">
+                    <i class="fas fa-user-circle fa-3x text-primary mb-2"></i>
+                    <h5 class="card-title">${cliente.Nombre}</h5>
+                    <p class="text-muted">${cliente.Nombre_Negocio}</p>
+                </div>
+                
+                <div class="border-top pt-3">
+                    <div class="row mb-2">
+                        <div class="col-4 text-muted">Teléfono:</div>
+                        <div class="col-8">${cliente.Telefono || 'N/A'}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-4 text-muted">Dirección:</div>
+                        <div class="col-8">${cliente.Direccion || 'N/A'}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-4 text-muted">Municipio:</div>
+                        <div class="col-8">${cliente.Municipio || 'N/A'}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-4 text-muted">Departamento:</div>
+                        <div class="col-8">${cliente.Departamento || 'N/A'}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-4 text-muted">Nivel Precio:</div>
+                        <div class="col-8">${cliente.Nivel_Precio || 'N/A'}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-4 text-muted">Saldo:</div>
+                        <div class="col-8">
+                            <span class="badge bg-${saldoColor}">Q. ${saldo.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border-top pt-3">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-warning btn-sm" onclick="editarCliente(${JSON.stringify(cliente).replace(/"/g, '&quot;')})">
+                            <i class="fas fa-edit"></i> Editar Cliente
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="eliminarCliente(${cliente.Codigo}, '${cliente.Nombre}')">
+                            <i class="fas fa-trash"></i> Eliminar Cliente
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Cargar dropdowns
+        async function cargarDropdowns() {
+            console.log('🔽 Cargando catálogos...');
+            
+            try {
+                // Cargar municipios
+                const municipiosResponse = await fetch('/listado_municipios');
+                const municipios = await municipiosResponse.json();
+                
+                // Cargar departamentos
+                const departamentosResponse = await fetch('/listado_departamentos');
+                const departamentos = await departamentosResponse.json();
+                
+                // Cargar niveles de precio
+                const nivelesResponse = await fetch('/listado_niveles_precio');
+                const niveles = await nivelesResponse.json();
+                
+                // Llenar dropdowns
+                llenarDropdowns(municipios, departamentos, niveles);
+                
+                console.log('✅ Catálogos cargados');
+                
+            } catch (error) {
+                console.error('❌ Error al cargar catálogos:', error);
+            }
+        }
+
+        // Llenar dropdowns con datos
+        function llenarDropdowns(municipios, departamentos, niveles) {
+            // Municipios
+            const municipioSelects = document.querySelectorAll('select[name="Municipio"]');
+            municipioSelects.forEach(select => {
+                select.innerHTML = '<option value="">Seleccione un municipio</option>';
+                municipios.forEach(municipio => {
+                    select.innerHTML += `<option value="${municipio.id}">${municipio.nombre}</option>`;
+                });
+            });
+
+            // Departamentos
+            const departamentoSelects = document.querySelectorAll('select[name="Departamento"]');
+            departamentoSelects.forEach(select => {
+                select.innerHTML = '<option value="">Seleccione un departamento</option>';
+                departamentos.forEach(departamento => {
+                    select.innerHTML += `<option value="${departamento.id}">${departamento.nombre}</option>`;
+                });
+            });
+
+            // Niveles de precio
+            const nivelSelects = document.querySelectorAll('select[name="Nivel_Precio"]');
+            nivelSelects.forEach(select => {
+                select.innerHTML = '<option value="">Seleccione un nivel de precio</option>';
+                niveles.forEach(nivel => {
+                    select.innerHTML += `<option value="${nivel.id}">${nivel.nombre}</option>`;
+                });
+            });
+        }
+
+        // Configurar formularios
+        function setupFormularios() {
+            // Formulario de inserción
+            document.getElementById('formInsertar').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                console.log('📝 Insertando nuevo cliente...');
+                
+                const formData = new FormData(this);
+                const clienteData = Object.fromEntries(formData);
+                
+                try {
+                    const response = await fetch('/insertar_cliente', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(clienteData)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta del servidor');
+                    }
+
+                    const result = await response.json();
+                    
+                    // Cerrar modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalInsertar'));
+                    modal.hide();
+                    
+                    // Limpiar formulario
+                    this.reset();
+                    
+                    // Recargar datos
+                    await cargarClientes();
+                    
+                    // Mostrar mensaje de éxito
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Cliente Agregado',
+                        text: 'El cliente se ha agregado exitosamente',
+                        confirmButtonColor: 'var(--primary-blue)'
+                    });
+                    
+                } catch (error) {
+                    console.error('❌ Error al insertar cliente:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudo agregar el cliente',
+                        confirmButtonColor: 'var(--primary-blue)'
+                    });
+                }
+            });
+
+            // Formulario de edición
+            document.getElementById('formEditar').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                console.log('✏️ Actualizando cliente...');
+                
+                const formData = new FormData(this);
+                const clienteData = Object.fromEntries(formData);
+                
+                try {
+                    const response = await fetch('/actualizar_cliente', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(clienteData)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta del servidor');
+                    }
+
+                    const result = await response.json();
+                    
+                    // Cerrar modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditar'));
+                    modal.hide();
+                    
+                    // Recargar datos
+                    await cargarClientes();
+                    
+                    // Limpiar panel de detalles
+                    document.getElementById('clienteDetalle').innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-mouse-pointer fa-3x mb-3"></i>
+                            <p>Selecciona un cliente de la lista para ver sus detalles</p>
+                        </div>
+                    `;
+                    
+                    // Mostrar mensaje de éxito
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Cliente Actualizado',
+                        text: 'Los datos del cliente se han actualizado exitosamente',
+                        confirmButtonColor: 'var(--primary-blue)'
+                    });
+                    
+                } catch (error) {
+                    console.error('❌ Error al actualizar cliente:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudo actualizar el cliente',
+                        confirmButtonColor: 'var(--primary-blue)'
+                    });
+                }
+            });
+        }
+
+        // Editar cliente
+        function editarCliente(cliente) {
+            console.log('✏️ Editando cliente:', cliente.Codigo);
+            
+            const form = document.getElementById('formEditar');
+            
+            // Llenar campos del formulario
+            Object.keys(cliente).forEach(key => {
+                const input = form.elements[key];
+                if (input) {
+                    if (input.tagName === 'SELECT') {
+                        // Para selects, esperar un momento para que se llenen las opciones
+                        setTimeout(() => {
+                            input.value = cliente[key];
+                        }, 100);
+                    } else {
+                        input.value = cliente[key] || '';
+                    }
+                }
+            });
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('modalEditar'));
+            modal.show();
+        }
+
+        // Eliminar cliente
+        function eliminarCliente(codigo, nombre) {
+            console.log('🗑️ Eliminando cliente:', codigo);
+            
+            Swal.fire({
+                title: '¿Está seguro?',
+                text: `¿Desea eliminar el cliente "${nombre}"?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(`/eliminar_cliente/${codigo}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Error en la respuesta del servidor');
+                        }
+
+                        const result = await response.json();
+                        
+                        // Recargar datos
+                        await cargarClientes();
+                        
+                        // Limpiar panel de detalles
+                        document.getElementById('clienteDetalle').innerHTML = `
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-mouse-pointer fa-3x mb-3"></i>
+                                <p>Selecciona un cliente de la lista para ver sus detalles</p>
+                            </div>
+                        `;
+                        
+                        // Mostrar mensaje de éxito
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Cliente Eliminado',
+                            text: 'El cliente se ha eliminado exitosamente',
+                            confirmButtonColor: 'var(--primary-blue)'
+                        });
+                        
+                    } catch (error) {
+                        console.error('❌ Error al eliminar cliente:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudo eliminar el cliente',
+                            confirmButtonColor: 'var(--primary-blue)'
+                        });
+                    }
+                }
+            });
+        }
+
+        // Función para toggle de submenús
+        function toggleSubmenu(submenuId, chevronId) {
+            const submenu = document.getElementById(submenuId);
+            const chevron = document.getElementById(chevronId);
+            submenu.classList.toggle('active');
+            chevron.classList.toggle('active');
+        }
+
+        // Recargar página completa
+        function recargarPagina() {
+            window.location.reload();
+        }
+
+        // Exportar a CSV (función adicional)
+        function exportarCSV() {
+            if (clientesData.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin Datos',
+                    text: 'No hay clientes para exportar',
+                    confirmButtonColor: 'var(--primary-blue)'
+                });
+                return;
+            }
+
+            const csv = convertirACSV(clientesData);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `clientes_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // Convertir datos a CSV
+        function convertirACSV(data) {
+            const headers = ['Código', 'Nombre', 'Negocio', 'NIT', 'Teléfono', 'Dirección', 'Municipio', 'Departamento', 'Saldo'];
+            const rows = data.map(cliente => [
+                cliente.Codigo,
+                cliente.Nombre,
+                cliente.Nombre_Negocio,
+                cliente.NIT,
+                cliente.Telefono,
+                cliente.Direccion,
+                cliente.Municipio,
+                cliente.Departamento,
+                cliente.Saldo
+            ]);
+
+            return [headers, ...rows].map(row => 
+                row.map(field => `"${field || ''}"`).join(',')
+            ).join('\n');
+        }
+    </script>
+</body>
+</html>
+                        <div class="col-4 text-muted">Código:</div>
+                        <div class="col-8"><strong>${cliente.Codigo}</strong></div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-4 text-muted">NIT:</div>
+                        <div class="col-8">${cliente.NIT || 'N/A'}</div>
+                    </div>
+                    <div class="row mb-2">  
