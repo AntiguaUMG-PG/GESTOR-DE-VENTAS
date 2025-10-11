@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+pydantic
+typing
+starlette.middleware.sessions
