@@ -1,4 +1,6 @@
 fastapi
 uvicorn
 pydantic
-typing
+starlette
+itsdangerous
+jinja2
