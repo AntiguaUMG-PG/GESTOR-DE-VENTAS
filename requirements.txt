@@ -4,3 +4,4 @@ pydantic
 starlette
 itsdangerous
 jinja2
+pyodbc
