@@ -145,7 +145,7 @@ async def get_productos_page(request: Request, user: dict = Depends(require_logi
     """Página de productos"""
     try:
         productos = await get_productos_data()
-        return templates.TemplateResponse("Productos.html", {
+        return templates.TemplateResponse("productos.html", {
             "request": request, 
             "contenido_producto": productos,
             "usuario": user.get("nombre_usuario"),
