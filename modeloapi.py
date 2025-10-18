@@ -6,13 +6,13 @@ from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
-import pyodbc
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import os
 from datetime import datetime, date
 
 app = FastAPI(title="Gestor de Pedidos", version="1.0.0")
 app.add_middleware(SessionMiddleware, secret_key="Natha0908I45")
-
 
 # Configuración de plantillas y archivos estáticos
 templates = Jinja2Templates(directory="templates")
@@ -79,52 +79,25 @@ class PedidoDetalle(BaseModel):
     TOTAL: float
 
 # ================================================
-# CONEXIÓN A BASE DE DATOS
+# CONEXIÓN A BASE DE DATOS POSTGRESQL
 # ================================================
 
 def conexion_sql():
-    """funcion para la configuracion de la conexión a la base de datos"""
+    """Función para la configuración de la conexión a PostgreSQL"""
     try:
-        drivers = [
-            'ODBC Driver 17 for SQL Server',
-            'ODBC Driver 13 for SQL Server', 
-            'SQL Server Native Client 11.0',
-            'SQL Server'
-        ]
-        
-        connection_string = None
-        for driver in drivers:
-            try:
-                connection_string = (
-                    f'DRIVER={{{driver}}};'
-                    'SERVER=LENOVONATHA;'
-                    'DATABASE=Gestor_Pedidos;'
-                    'UID=manage;'
-                    'PWD=natha91275;'
-                    'Trusted_Connection=no;'
-                    'Encrypt=no;'
-                    'TrustServerCertificate=yes;'
-                )
-                print(f"Intentando conexión con driver: {driver}")
-                sql_conexion = pyodbc.connect(connection_string, timeout=10)
-                print(f"✅ Conexión exitosa con driver: {driver}")
-                return sql_conexion
-            except pyodbc.Error as e:
-                print(f"❌ Falló con driver {driver}: {str(e)}")
-                continue
-        
-        # Si llegamos aquí, ningún driver funcionó
-        raise Exception("No se pudo conectar con ningún driver disponible")
+        # Configuración de conexión a PostgreSQL
+        connection = psycopg2.connect(
+            host="localhost",  # o tu host
+            port=5432,
+            database="gestor_pedidos",
+            user="manage",
+            password="natha91275"
+        )
+        print("✅ Conexión exitosa a PostgreSQL")
+        return connection
         
     except Exception as error:
-        print(f"❌ Error general de conexión: {str(error)}")
-        print("🔍 Drivers ODBC disponibles:")
-        try:
-            available_drivers = pyodbc.drivers()
-            for driver in available_drivers:
-                print(f"   - {driver}")
-        except:
-            print("   No se pudieron listar los drivers")
+        print(f"❌ Error de conexión a PostgreSQL: {str(error)}")
         return None
 
 # ================================================
@@ -147,31 +120,30 @@ async def get_login(request: Request, user: dict = Depends(require_login)):
         "request": request,
         "usuario": user.get("nombre_usuario"),
         "perfil": user.get("codigo_perfil")
-        })
+    })
 
 @app.get("/clientes")
 async def get_login(request: Request, user: dict = Depends(require_login)):
-    """Página Principal"""
+    """Página de Clientes"""
     return templates.TemplateResponse("clientes.html", {
         "request": request,
         "usuario": user.get("nombre_usuario"),
         "perfil": user.get("codigo_perfil")
-        })
+    })
 
 @app.get("/pedidos")
 async def get_login(request: Request, user: dict = Depends(require_login)):
-    """Página Principal"""
+    """Página de Pedidos"""
     return templates.TemplateResponse("pedidos.html", {
         "request": request,
         "usuario": user.get("nombre_usuario"),
         "perfil": user.get("codigo_perfil")
-        })
+    })
 
 @app.get("/productos")
 async def get_productos_page(request: Request, user: dict = Depends(require_login)):
     """Página de productos"""
     try:
-        # Obtener productos directamente desde la base de datos
         productos = await get_productos_data()
         return templates.TemplateResponse("Productos.html", {
             "request": request, 
@@ -188,12 +160,12 @@ async def get_productos_page(request: Request, user: dict = Depends(require_logi
     
 @app.get("/reporte_inventario")
 async def get_login(request: Request, user: dict = Depends(require_login)):
-    """Página Principal"""
+    """Página de Reporte de Inventario"""
     return templates.TemplateResponse("reporte_inventario.html", {
         "request": request,
         "usuario": user.get("nombre_usuario"),
         "perfil": user.get("codigo_perfil")
-        })
+    })
 
 # ================================================
 # RUTAS DE AUTENTICACIÓN
@@ -205,11 +177,9 @@ async def post_login_frontend(request: Request, nombre: str = Form(...), contras
     print(f"-- Intento de login HTML - Usuario: '{nombre}', Contraseña length: {len(contrasena)}")
     
     try:
-        # Limpiar espacios en blanco
         nombre = nombre.strip()
         contrasena = contrasena.strip()
         
-        # Validar que los campos no estén vacíos
         if not nombre or not contrasena:
             print("❌ Campos vacíos después de limpiar")
             error_msg = "Por favor complete todos los campos"
@@ -218,7 +188,6 @@ async def post_login_frontend(request: Request, nombre: str = Form(...), contras
                 "error": error_msg
             })
         
-        # Autenticar usuario
         print("Iniciando autenticación...")
         auth_result = await authenticate_user(nombre, contrasena)
         print(f"Resultado autenticación HTML: {auth_result}")
@@ -231,7 +200,6 @@ async def post_login_frontend(request: Request, nombre: str = Form(...), contras
                 "usuario": nombre
             }
             
-            # Redirigir al dashboard
             return RedirectResponse(url="/index", status_code=302)
         else:
             return templates.TemplateResponse("login.html", {
@@ -240,14 +208,14 @@ async def post_login_frontend(request: Request, nombre: str = Form(...), contras
             })
             
     except Exception as e:
-        print(f" Error crítico en login HTML: {str(e)}")
+        print(f"❌ Error crítico en login HTML: {str(e)}")
         import traceback
         traceback.print_exc()
         return templates.TemplateResponse("login.html", {
             "request": request,
             "error": "Error interno del servidor. Revise los logs en la consola."
         })
-    # Cerrar la sesion de usuario
+
 @app.get("/logout")
 async def logout(request: Request):
     """Cerrar sesión"""
@@ -270,11 +238,10 @@ async def authenticate_user(usuario: str, clave: str) -> dict:
     """Función auxiliar para autenticar usuario"""
     print(f"Autenticando usuario: {usuario}")
     
-    # Probar conexión primero
     conn = conexion_sql()
     
     if not conn:
-        print(" No se pudo establecer conexión a la base de datos")
+        print("❌ No se pudo establecer conexión a la base de datos")
         return {
             'authenticated': False,
             'message': 'Error de conexión a la base de datos. Verifique la configuración.'
@@ -285,9 +252,9 @@ async def authenticate_user(usuario: str, clave: str) -> dict:
     try:
         cursor = conn.cursor()
         consulta_sql = """
-        SELECT CODIGO_USUARIO, NOMBRE_USUARIO, CODIGO_PERFIL
-        FROM USUARIOS
-        WHERE USUARIO = ? AND CLAVE = ?
+        SELECT codigo_usuario, nombre_usuario, codigo_perfil
+        FROM usuarios
+        WHERE usuario = %s AND clave = %s
         """
         
         print(f"-- Ejecutando consulta para usuario: {usuario}")
@@ -308,8 +275,7 @@ async def authenticate_user(usuario: str, clave: str) -> dict:
         else:
             print("-- Usuario no encontrado o credenciales incorrectas")
             
-            # Verificar si el usuario existe
-            cursor.execute("SELECT COUNT(*) FROM USUARIOS WHERE USUARIO = ?", (usuario,))
+            cursor.execute("SELECT COUNT(*) FROM usuarios WHERE usuario = %s", (usuario,))
             user_exists = cursor.fetchone()[0]
             
             if user_exists > 0:
@@ -336,164 +302,6 @@ async def authenticate_user(usuario: str, clave: str) -> dict:
     finally:
         cursor.close()
         conn.close()
-@app.post("/debug-login-json")
-async def debug_login_json(login_data: LoginRequest):
-    """Endpoint de debug para login usando JSON (para Postman/API calls)"""
-    usuario = login_data.usuario
-    clave = login_data.clave
-    
-    debug_info = {
-        "input_data": {
-            "usuario": usuario,
-            "clave_length": len(clave),
-            "usuario_length": len(usuario)
-        },
-        "steps": []
-    }
-    
-    conn = conexion_sql()
-    if not conn:
-        debug_info["error"] = "No connection to database"
-        return JSONResponse(content=debug_info)
-    
-    try:
-        cursor = conn.cursor()
-        debug_info["steps"].append("✅ Conexión establecida")
-        
-        # Paso 1: Verificar si el usuario existe (sin importar la clave)
-        cursor.execute("SELECT CODIGO_USUARIO, USUARIO, NOMBRE_USUARIO, CODIGO_PERFIL FROM USUARIOS WHERE USUARIO = ?", (usuario,))
-        user_data = cursor.fetchone()
-        
-        if user_data:
-            debug_info["steps"].append("✅ Usuario encontrado en base de datos")
-            debug_info["user_found"] = {
-                "codigo_usuario": user_data[0],
-                "usuario": user_data[1],
-                "nombre_usuario": user_data[2],
-                "codigo_perfil": user_data[3]
-            }
-            
-            # Paso 2: Verificar con usuario y clave
-            cursor.execute("""
-                SELECT CODIGO_USUARIO, USUARIO, NOMBRE_USUARIO, CODIGO_PERFIL, CLAVE
-                FROM USUARIOS 
-                WHERE USUARIO = ? AND CLAVE = ?
-            """, (usuario, clave))
-            auth_result = cursor.fetchone()
-            
-            if auth_result:
-                debug_info["steps"].append("✅ Autenticación exitosa")
-                debug_info["auth_success"] = True
-                debug_info["final_result"] = {
-                    "codigo_usuario": auth_result[0],
-                    "usuario": auth_result[1],
-                    "nombre_usuario": auth_result[2],
-                    "codigo_perfil": auth_result[3]
-                }
-            else:
-                debug_info["steps"].append("❌ Credenciales incorrectas")
-                debug_info["auth_success"] = False
-                
-                # Verificar la clave almacenada (solo longitud por seguridad)
-                cursor.execute("SELECT CLAVE FROM USUARIOS WHERE USUARIO = ?", (usuario,))
-                stored_password = cursor.fetchone()[0]
-                debug_info["password_comparison"] = {
-                    "input_length": len(clave),
-                    "stored_length": len(stored_password),
-                    "match": clave == stored_password,
-                    "input_preview": clave[:3] + "..." if len(clave) > 3 else clave,
-                    "stored_preview": stored_password[:3] + "..." if len(stored_password) > 3 else stored_password
-                }
-        else:
-            debug_info["steps"].append("❌ Usuario no encontrado")
-            debug_info["auth_success"] = False
-            
-    except Exception as e:
-        debug_info["error"] = str(e)
-        debug_info["steps"].append(f"💥 Error: {str(e)}")
-        
-    finally:
-        cursor.close()
-        conn.close()
-    
-    return JSONResponse(content=debug_info)
-
-@app.post("/debug-login")
-async def debug_login(usuario: str = Form(...), clave: str = Form(...)):
-    """Endpoint de debug para el login - con información detallada"""
-    debug_info = {
-        "input_data": {
-            "usuario": usuario,
-            "clave_length": len(clave),
-            "usuario_length": len(usuario)
-        },
-        "steps": []
-    }
-    
-    conn = conexion_sql()
-    if not conn:
-        debug_info["error"] = "No connection to database"
-        return JSONResponse(content=debug_info)
-    
-    try:
-        cursor = conn.cursor()
-        debug_info["steps"].append("✅ Conexión establecida")
-        
-        # Paso 1: Verificar si el usuario existe (sin importar la clave)
-        cursor.execute("SELECT CODIGO_USUARIO, USUARIO, NOMBRE_USUARIO, CODIGO_PERFIL FROM USUARIOS WHERE USUARIO = ?", (usuario,))
-        user_data = cursor.fetchone()
-        
-        if user_data:
-            debug_info["steps"].append("✅ Usuario encontrado en base de datos")
-            debug_info["user_found"] = {
-                "codigo_usuario": user_data[0],
-                "usuario": user_data[1],
-                "nombre_usuario": user_data[2],
-                "codigo_perfil": user_data[3]
-            }
-            
-            # Paso 2: Verificar con usuario y clave
-            cursor.execute("""
-                SELECT CODIGO_USUARIO, USUARIO, NOMBRE_USUARIO, CODIGO_PERFIL, CLAVE
-                FROM USUARIOS 
-                WHERE USUARIO = ? AND CLAVE = ?
-            """, (usuario, clave))
-            auth_result = cursor.fetchone()
-            
-            if auth_result:
-                debug_info["steps"].append("✅ Autenticación exitosa")
-                debug_info["auth_success"] = True
-                debug_info["final_result"] = {
-                    "codigo_usuario": auth_result[0],
-                    "usuario": auth_result[1],
-                    "nombre_usuario": auth_result[2],
-                    "codigo_perfil": auth_result[3]
-                }
-            else:
-                debug_info["steps"].append("❌ Credenciales incorrectas")
-                debug_info["auth_success"] = False
-                
-                # Verificar la clave almacenada (solo longitud por seguridad)
-                cursor.execute("SELECT CLAVE FROM USUARIOS WHERE USUARIO = ?", (usuario,))
-                stored_password = cursor.fetchone()[0]
-                debug_info["password_comparison"] = {
-                    "input_length": len(clave),
-                    "stored_length": len(stored_password),
-                    "match": clave == stored_password
-                }
-        else:
-            debug_info["steps"].append("❌ Usuario no encontrado")
-            debug_info["auth_success"] = False
-            
-    except Exception as e:
-        debug_info["error"] = str(e)
-        debug_info["steps"].append(f"💥 Error: {str(e)}")
-        
-    finally:
-        cursor.close()
-        conn.close()
-    
-    return JSONResponse(content=debug_info)
 
 # ================================================
 # RUTAS DE CLIENTES
@@ -511,21 +319,21 @@ async def get_clientes_data(user: dict = Depends(require_login)):
         cursor = connection.cursor()
         cursor.execute("""
             SELECT 
-                C.CODIGO_CLIENTE as Codigo,
-                C.NOMBRE_CLIENTE as Nombre,
-                C.NOMBRE_NEGOCIO as Nombre_Negocio,
-                C.NIT,
-                C.TELEFONO as Telefono,
-                C.DIRECCION as Direccion,
-                M.NOMBRE_MUNICIPIO as Municipio,
-                D.NOMBRE_DEPARTAMENTO as Departamento,
-                NP.DESCRIPCION_NIVEL as Nivel_Precio,
-                ISNULL(C.SALDO, 0) as Saldo
-            FROM CLIENTES C
-            LEFT JOIN MUNICIPIOS M ON C.MUNICIPIO = M.MUNICIPIO
-            LEFT JOIN DEPARTAMENTOS D ON C.DEPARTAMENTO = D.DEPARTAMENTO
-            LEFT JOIN NIVEL_PRECIO NP ON C.NIVEL_PRECIO = NP.NIVEL_PRECIO
-            ORDER BY C.NOMBRE_CLIENTE
+                c.codigo_cliente as Codigo,
+                c.nombre_cliente as Nombre,
+                c.nombre_negocio as Nombre_Negocio,
+                c.nit,
+                c.telefono as Telefono,
+                c.direccion as Direccion,
+                m.nombre_municipio as Municipio,
+                d.nombre_departamento as Departamento,
+                np.descripcion_nivel as Nivel_Precio,
+                COALESCE(c.saldo, 0) as Saldo
+            FROM clientes c
+            LEFT JOIN municipios m ON c.municipio = m.municipio
+            LEFT JOIN departamentos d ON c.departamento = d.departamento
+            LEFT JOIN nivel_precio np ON c.nivel_precio = np.nivel_precio
+            ORDER BY c.nombre_cliente
         """)
         clientes = cursor.fetchall()
         
@@ -562,11 +370,11 @@ async def insertar_cliente(cliente_data: dict):
     try:
         cursor = connection.cursor()
         cursor.execute("""
-            INSERT INTO CLIENTES (
-                NOMBRE_CLIENTE, NOMBRE_NEGOCIO, NIT, TELEFONO, 
-                DIRECCION, MUNICIPIO, DEPARTAMENTO, NIVEL_PRECIO, SALDO
+            INSERT INTO clientes (
+                nombre_cliente, nombre_negocio, nit, telefono, 
+                direccion, municipio, departamento, nivel_precio, saldo
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0.0)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0.0)
         """, (
             cliente_data.get('Nombre'),
             cliente_data.get('Nombre_Negocio'),
@@ -591,7 +399,7 @@ async def insertar_cliente(cliente_data: dict):
 
 @app.put("/actualizar_cliente")
 async def actualizar_cliente(cliente_data: dict):
-    """Actualizacion de cliente existente"""
+    """Actualización de cliente existente"""
     connection = conexion_sql()
     
     if not connection:
@@ -600,10 +408,10 @@ async def actualizar_cliente(cliente_data: dict):
     try:
         cursor = connection.cursor()
         cursor.execute("""
-            UPDATE CLIENTES SET
-                NOMBRE_CLIENTE = ?, NOMBRE_NEGOCIO = ?, NIT = ?, TELEFONO = ?,
-                DIRECCION = ?, MUNICIPIO = ?, DEPARTAMENTO = ?, NIVEL_PRECIO = ?
-            WHERE CODIGO_CLIENTE = ?
+            UPDATE clientes SET
+                nombre_cliente = %s, nombre_negocio = %s, nit = %s, telefono = %s,
+                direccion = %s, municipio = %s, departamento = %s, nivel_precio = %s
+            WHERE codigo_cliente = %s
         """, (
             cliente_data.get('Nombre'),
             cliente_data.get('Nombre_Negocio'),
@@ -637,7 +445,7 @@ async def eliminar_cliente(codigo_cliente: int):
     
     try:
         cursor = connection.cursor()
-        cursor.execute("DELETE FROM CLIENTES WHERE CODIGO_CLIENTE = ?", (codigo_cliente,))
+        cursor.execute("DELETE FROM clientes WHERE codigo_cliente = %s", (codigo_cliente,))
         
         if cursor.rowcount > 0:
             connection.commit()
@@ -669,15 +477,15 @@ async def get_pedidos_data(user: dict = Depends(require_login)):
         cursor = connection.cursor()
         cursor.execute("""
             SELECT 
-                P.NUMERO_PEDIDO,
-                P.FECHA,
-                P.NOMBRE_CLIENTE,
-                P.NIT,
-                P.DIRECCION,
-                ISNULL(P.TOTAL_DOCUMENTO, 0) as TOTAL_DOCUMENTO,
-                P.ESTADO
-            FROM PEDIDOS_ENC P
-            ORDER BY P.NUMERO_PEDIDO DESC
+                p.numero_pedido,
+                p.fecha,
+                p.nombre_cliente,
+                p.nit,
+                p.direccion,
+                COALESCE(p.total_documento, 0) as total_documento,
+                p.estado
+            FROM pedidos_enc p
+            ORDER BY p.numero_pedido DESC
         """)
         pedidos = cursor.fetchall()
         
@@ -709,7 +517,7 @@ async def get_numero_pedido(user: dict = Depends(require_login)):
     
     try:
         cursor = connection.cursor()
-        cursor.execute("SELECT ISNULL(MAX(NUMERO_PEDIDO), 0) + 1 FROM PEDIDOS_ENC")
+        cursor.execute("SELECT COALESCE(MAX(numero_pedido), 0) + 1 FROM pedidos_enc")
         siguiente_numero = cursor.fetchone()[0]
         
         return {"ultimo_numero_pedido": siguiente_numero}
@@ -731,16 +539,17 @@ async def buscar_productos(term: str):
     try:
         cursor = connection.cursor()
         cursor.execute("""
-            SELECT TOP 20
-                P.CODIGO_PRODUCTO as Codigo,
-                P.NOMBRE_PRODUCTO as Descripcion_producto,
-                P.UNIDAD_MEDIDA as Presentacion,
-                ISNULL(PR.PRECIO, 0) as Precio,
-                ISNULL(P.EXISTENCIA, 0) as EXISTENCIA
-            FROM PRODUCTOS P
-            LEFT JOIN PRECIOS PR ON P.CODIGO_PRODUCTO = PR.CODIGO_PRODUCTO AND PR.NIVEL_PRECIO = 1
-            WHERE P.NOMBRE_PRODUCTO LIKE ?
-            ORDER BY P.NOMBRE_PRODUCTO
+            SELECT 
+                p.codigo_producto as Codigo,
+                p.nombre_producto as Descripcion_producto,
+                p.unidad_medida as Presentacion,
+                COALESCE(pr.precio, 0) as Precio,
+                COALESCE(p.existencia, 0) as EXISTENCIA
+            FROM productos p
+            LEFT JOIN precios pr ON p.codigo_producto = pr.codigo_producto AND pr.nivel_precio = 1
+            WHERE p.nombre_producto ILIKE %s
+            ORDER BY p.nombre_producto
+            LIMIT 20
         """, (f"%{term}%",))
         
         productos = cursor.fetchall()
@@ -772,9 +581,9 @@ async def verificar_stock(stock_data: dict):
     try:
         cursor = connection.cursor()
         cursor.execute("""
-            SELECT EXISTENCIA 
-            FROM PRODUCTOS 
-            WHERE CODIGO_PRODUCTO = ?
+            SELECT existencia 
+            FROM productos 
+            WHERE codigo_producto = %s
         """, (stock_data.get('codigo_producto'),))
         
         result = cursor.fetchone()
@@ -811,7 +620,6 @@ async def insertar_pedido_enc(pedido_data: dict):
     try:
         cursor = connection.cursor()
         
-        # Convertir fecha de DD/MM/YYYY a formato datetime
         fecha_str = pedido_data.get('FECHA_PEDIDO')
         if fecha_str and '/' in fecha_str:
             fecha_pedido = datetime.strptime(fecha_str, "%d/%m/%Y %H:%M:%S")
@@ -819,12 +627,12 @@ async def insertar_pedido_enc(pedido_data: dict):
             fecha_pedido = datetime.now() 
         
         cursor.execute("""
-            INSERT INTO PEDIDOS_ENC (
-                FECHA, CODIGO_USUARIO, CODIGO_CLIENTE, NOMBRE_CLIENTE,
-                NIT, DIRECCION, TOTAL_DOCUMENTO, ESTADO, COMENTARIOS
+            INSERT INTO pedidos_enc (
+                fecha, codigo_usuario, codigo_cliente, nombre_cliente,
+                nit, direccion, total_documento, estado, comentarios
             )
-            OUTPUT INSERTED.NUMERO_PEDIDO
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'ABIERTO', ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'ABIERTO', %s)
+            RETURNING numero_pedido
         """, (
             fecha_pedido,
             pedido_data.get('CODIGO_USUARIO'),
@@ -853,7 +661,6 @@ async def insertar_pedido_enc(pedido_data: dict):
 async def insertar_pedido_det(detalles_data: List[Dict[str, Any]]):
     """Insertar los detalles de pedido"""
     
-    
     connection = conexion_sql()
     
     if not connection:
@@ -866,14 +673,14 @@ async def insertar_pedido_det(detalles_data: List[Dict[str, Any]]):
             print(f"Insertando detalle {i+1}: {detalle}")
             
             cursor.execute("""
-                INSERT INTO PEDIDOS_DET (
-                    NUMERO_PEDIDO, CODIGO_PRODUCTO, NOMBRE_PRODUCTO,
-                    UNIDAD_MEDIDA, CANTIDAD, PRECIO_UNITARIO, TOTAL_LINEA
+                INSERT INTO pedidos_det (
+                    numero_pedido, codigo_producto, nombre_producto,
+                    unidad_medida, cantidad, precio_unitario, total_linea
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (
                 detalle.get('NUMERO_PEDIDO'),
-                str(detalle.get('CODIGO_PRODUCTO')),  # Convertir a string
+                int(detalle.get('CODIGO_PRODUCTO')),
                 detalle.get('NOMBRE_PRODUCTO'),
                 detalle.get('UNIDAD_MEDIDA'),
                 int(detalle.get('CANTIDAD', 0)),
@@ -914,16 +721,15 @@ async def actualizar_stock(productos_data: List[Dict[str, Any]]):
             print(f"Actualizando producto {codigo}: restando {cantidad} unidades")
             
             cursor.execute("""
-                UPDATE PRODUCTOS 
-                SET EXISTENCIA = EXISTENCIA - ?
-                WHERE CODIGO_PRODUCTO = ?
+                UPDATE productos 
+                SET existencia = existencia - %s
+                WHERE codigo_producto = %s
             """, (
                 float(cantidad),
                 int(codigo)
             ))
             
-            # Verificar el stock actualizado
-            cursor.execute("SELECT EXISTENCIA FROM PRODUCTOS WHERE CODIGO_PRODUCTO = ?", (int(codigo),))
+            cursor.execute("SELECT existencia FROM productos WHERE codigo_producto = %s", (int(codigo),))
             nuevo_stock = cursor.fetchone()
             print(f"Nuevo stock del producto {codigo}: {nuevo_stock[0] if nuevo_stock else 'N/A'}")
         
@@ -953,15 +759,15 @@ async def get_detalle_pedido(numero_pedido: int):
         cursor = connection.cursor()
         cursor.execute("""
             SELECT 
-                CODIGO_PRODUCTO,
-                NOMBRE_PRODUCTO,
-                UNIDAD_MEDIDA,
-                CANTIDAD,
-                PRECIO_UNITARIO,
-                TOTAL_LINEA
-            FROM PEDIDOS_DET
-            WHERE NUMERO_PEDIDO = ?
-            ORDER BY NUMERO_LINEA
+                codigo_producto,
+                nombre_producto,
+                unidad_medida,
+                cantidad,
+                precio_unitario,
+                total_linea
+            FROM pedidos_det
+            WHERE numero_pedido = %s
+            ORDER BY numero_linea
         """, (numero_pedido,))
         
         detalles = cursor.fetchall()
@@ -984,7 +790,6 @@ async def get_detalle_pedido(numero_pedido: int):
         cursor.close()
         connection.close()
 
-
 @app.get("/imprimir_pedido/{numero_pedido}")
 async def imprimir_pedido(request: Request, numero_pedido: int):
     """Generar vista PDF del pedido"""
@@ -996,19 +801,18 @@ async def imprimir_pedido(request: Request, numero_pedido: int):
     try:
         cursor = connection.cursor()
         
-        # Obtener encabezado del pedido
         cursor.execute("""
             SELECT 
-                NUMERO_PEDIDO,
-                FECHA,
-                NOMBRE_CLIENTE,
-                NIT,
-                DIRECCION,
-                TOTAL_DOCUMENTO,
-                ESTADO,
-                COMENTARIOS
-            FROM PEDIDOS_ENC
-            WHERE NUMERO_PEDIDO = ?
+                numero_pedido,
+                fecha,
+                nombre_cliente,
+                nit,
+                direccion,
+                total_documento,
+                estado,
+                comentarios
+            FROM pedidos_enc
+            WHERE numero_pedido = %s
         """, (numero_pedido,))
         
         encabezado = cursor.fetchone()
@@ -1016,26 +820,23 @@ async def imprimir_pedido(request: Request, numero_pedido: int):
         if not encabezado:
             raise HTTPException(status_code=404, detail="Pedido no encontrado")
         
-        # Obtener detalles del pedido
         cursor.execute("""
             SELECT 
-                CODIGO_PRODUCTO,
-                NOMBRE_PRODUCTO,
-                UNIDAD_MEDIDA,
-                CANTIDAD,
-                PRECIO_UNITARIO,
-                TOTAL_LINEA
-            FROM PEDIDOS_DET
-            WHERE NUMERO_PEDIDO = ?
-            ORDER BY NUMERO_LINEA
+                codigo_producto,
+                nombre_producto,
+                unidad_medida,
+                cantidad,
+                precio_unitario,
+                total_linea
+            FROM pedidos_det
+            WHERE numero_pedido = %s
+            ORDER BY numero_linea
         """, (numero_pedido,))
         
         detalles = cursor.fetchall()
         
-        # Formatear fecha
         fecha_pedido = encabezado[1].strftime('%d/%m/%Y %H:%M:%S Hrs') if encabezado[1] else ''
         
-        # Prepara datos JSON para la plantilla
         pedido_data = {
             'numero': encabezado[0],
             'fecha': fecha_pedido,
@@ -1047,7 +848,6 @@ async def imprimir_pedido(request: Request, numero_pedido: int):
             'comentarios': encabezado[7] or ''
         }
         
-        # Formatear detalles
         detalles_lista = [{
             'codigo': row[0],
             'producto': row[1],
@@ -1057,8 +857,6 @@ async def imprimir_pedido(request: Request, numero_pedido: int):
             'total': float(row[5]) if row[5] else 0.0
         } for row in detalles]
         
-        # Obtener fecha y hora actual para impresión
-        from datetime import datetime
         fecha_impresion = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         
         return templates.TemplateResponse("pedido_pdf.html", {
@@ -1097,43 +895,39 @@ async def get_reporte_inventario_pedidos(fecha: str = None):
     try:
         cursor = connection.cursor()
         
-        # Si no se proporciona fecha, usar la fecha actual
         if not fecha:
-            from datetime import date
             fecha = date.today().strftime('%Y-%m-%d')
         
-        # Consulta para obtener productos vendidos en el día y comparar con inventario
         cursor.execute("""
             SELECT 
-                P.CODIGO_PRODUCTO,
-                P.NOMBRE_PRODUCTO,
-                P.UNIDAD_MEDIDA,
-                M.NOMBRE_MARCA,
-                ISNULL(P.EXISTENCIA, 0) AS INVENTARIO_ACTUAL,
-                V.CANTIDAD_VENDIDA,
-                ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0) AS INVENTARIO_RESULTANTE,
+                p.codigo_producto,
+                p.nombre_producto,
+                p.unidad_medida,
+                m.nombre_marca,
+                COALESCE(p.existencia, 0) AS inventario_actual,
+                v.cantidad_vendida,
+                COALESCE(p.existencia, 0) - COALESCE(v.cantidad_vendida, 0) AS inventario_resultante,
                 CASE 
-                    WHEN (ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0)) < 0
-                    THEN ABS(ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0))
+                    WHEN (COALESCE(p.existencia, 0) - COALESCE(v.cantidad_vendida, 0)) < 0
+                    THEN ABS(COALESCE(p.existencia, 0) - COALESCE(v.cantidad_vendida, 0))
                     ELSE 0 
-                END AS FALTANTE,
-                PR.PRECIO
-            FROM PRODUCTOS P
-            INNER JOIN MARCAS M ON P.MARCA = M.CODIGO_MARCA
-            LEFT JOIN PRECIOS PR ON P.CODIGO_PRODUCTO = PR.CODIGO_PRODUCTO
-            -- tabla derivada con ventas agregadas SOLO para la fecha dada
+                END AS faltante,
+                pr.precio
+            FROM productos p
+            INNER JOIN marcas m ON p.marca = m.codigo_marca
+            LEFT JOIN precios pr ON p.codigo_producto = pr.codigo_producto
             INNER JOIN (
                 SELECT 
-                    PD.CODIGO_PRODUCTO,
-                    ISNULL(SUM(PD.CANTIDAD), 0) AS CANTIDAD_VENDIDA
-                FROM PEDIDOS_DET PD
-                INNER JOIN PEDIDOS_ENC PE ON PD.NUMERO_PEDIDO = PE.NUMERO_PEDIDO
-                WHERE CONVERT(DATE, PE.FECHA) = ?
-                GROUP BY PD.CODIGO_PRODUCTO
-            ) AS V ON P.CODIGO_PRODUCTO = V.CODIGO_PRODUCTO
+                    pd.codigo_producto,
+                    COALESCE(SUM(pd.cantidad), 0) AS cantidad_vendida
+                FROM pedidos_det pd
+                INNER JOIN pedidos_enc pe ON pd.numero_pedido = pe.numero_pedido
+                WHERE DATE(pe.fecha) = %s
+                GROUP BY pd.codigo_producto
+            ) AS v ON p.codigo_producto = v.codigo_producto
             ORDER BY 
-                CASE WHEN (ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0)) < 0 THEN 0 ELSE 1 END,
-                P.NOMBRE_PRODUCTO
+                CASE WHEN (COALESCE(p.existencia, 0) - COALESCE(v.cantidad_vendida, 0)) < 0 THEN 0 ELSE 1 END,
+                p.nombre_producto
         """, (fecha,))
         
         resultados = cursor.fetchall()
@@ -1174,57 +968,65 @@ async def get_resumen_inventario(fecha: str = None):
         cursor = connection.cursor()
 
         if not fecha:
-            from datetime import date
             fecha = date.today().strftime('%Y-%m-%d')
 
-        # Subconsulta: total vendido por producto x fecha indicada
-        ventas_query = """
-            SELECT 
-                PD.CODIGO_PRODUCTO,
-                ISNULL(SUM(PD.CANTIDAD), 0) AS CANTIDAD_VENDIDA
-            FROM PEDIDOS_DET PD
-            INNER JOIN PEDIDOS_ENC PE ON PD.NUMERO_PEDIDO = PE.NUMERO_PEDIDO
-            WHERE CONVERT(DATE, PE.FECHA) = ?
-            GROUP BY PD.CODIGO_PRODUCTO
-        """
-
         # Total de productos vendidos en la fecha seleccionada
-        cursor.execute(f"SELECT COUNT(*) FROM ({ventas_query}) AS V", (fecha,))
+        cursor.execute("""
+            SELECT COUNT(DISTINCT pd.codigo_producto)
+            FROM pedidos_det pd
+            INNER JOIN pedidos_enc pe ON pd.numero_pedido = pe.numero_pedido
+            WHERE DATE(pe.fecha) = %s
+        """, (fecha,))
         total_productos_vendidos = cursor.fetchone()[0]
 
         # Productos con inventario insuficiente
-        cursor.execute(f"""
+        cursor.execute("""
             SELECT COUNT(*)
-            FROM PRODUCTOS P
-            INNER JOIN ({ventas_query}) AS V ON P.CODIGO_PRODUCTO = V.CODIGO_PRODUCTO
-            WHERE (ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0)) < 0
+            FROM productos p
+            INNER JOIN (
+                SELECT 
+                    pd.codigo_producto,
+                    COALESCE(SUM(pd.cantidad), 0) AS cantidad_vendida
+                FROM pedidos_det pd
+                INNER JOIN pedidos_enc pe ON pd.numero_pedido = pe.numero_pedido
+                WHERE DATE(pe.fecha) = %s
+                GROUP BY pd.codigo_producto
+            ) AS v ON p.codigo_producto = v.codigo_producto
+            WHERE (COALESCE(p.existencia, 0) - COALESCE(v.cantidad_vendida, 0)) < 0
         """, (fecha,))
         productos_insuficientes = cursor.fetchone()[0]
 
         # Total de unidades faltantes
-        cursor.execute(f"""
+        cursor.execute("""
             SELECT 
-                ISNULL(SUM(
+                COALESCE(SUM(
                     CASE 
-                        WHEN (ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0)) < 0 
-                        THEN ABS(ISNULL(P.EXISTENCIA, 0) - ISNULL(V.CANTIDAD_VENDIDA, 0))
+                        WHEN (COALESCE(p.existencia, 0) - COALESCE(v.cantidad_vendida, 0)) < 0 
+                        THEN ABS(COALESCE(p.existencia, 0) - COALESCE(v.cantidad_vendida, 0))
                         ELSE 0 
                     END
                 ), 0)
-            FROM PRODUCTOS P
-            INNER JOIN ({ventas_query}) AS V ON P.CODIGO_PRODUCTO = V.CODIGO_PRODUCTO
+            FROM productos p
+            INNER JOIN (
+                SELECT 
+                    pd.codigo_producto,
+                    COALESCE(SUM(pd.cantidad), 0) AS cantidad_vendida
+                FROM pedidos_det pd
+                INNER JOIN pedidos_enc pe ON pd.numero_pedido = pe.numero_pedido
+                WHERE DATE(pe.fecha) = %s
+                GROUP BY pd.codigo_producto
+            ) AS v ON p.codigo_producto = v.codigo_producto
         """, (fecha,))
         total_unidades_faltantes = cursor.fetchone()[0] or 0
 
         # Total de pedidos del día
         cursor.execute("""
             SELECT COUNT(*) 
-            FROM PEDIDOS_ENC 
-            WHERE CONVERT(DATE, FECHA) = ?
+            FROM pedidos_enc 
+            WHERE DATE(fecha) = %s
         """, (fecha,))
         total_pedidos = cursor.fetchone()[0]
 
-        # Armar respuesta
         return {
             'fecha': fecha,
             'total_productos_vendidos': total_productos_vendidos,
@@ -1245,7 +1047,6 @@ async def get_resumen_inventario(fecha: str = None):
         cursor.close()
         connection.close()
 
-
 @app.get("/reporte/productos-criticos")
 async def get_productos_criticos(limite: int = 10):
     """
@@ -1259,18 +1060,19 @@ async def get_productos_criticos(limite: int = 10):
     try:
         cursor = connection.cursor()
         
-        cursor.execute(f"""
-            SELECT TOP {limite}
-                P.CODIGO_PRODUCTO,
-                P.NOMBRE_PRODUCTO,
-                P.UNIDAD_MEDIDA,
-                M.NOMBRE_MARCA,
-                ISNULL(P.EXISTENCIA, 0) as EXISTENCIA
-            FROM PRODUCTOS P
-            INNER JOIN MARCAS M ON P.MARCA = M.CODIGO_MARCA
-            WHERE ISNULL(P.EXISTENCIA, 0) <= 10
-            ORDER BY P.EXISTENCIA ASC
-        """)
+        cursor.execute("""
+            SELECT 
+                p.codigo_producto,
+                p.nombre_producto,
+                p.unidad_medida,
+                m.nombre_marca,
+                COALESCE(p.existencia, 0) as existencia
+            FROM productos p
+            INNER JOIN marcas m ON p.marca = m.codigo_marca
+            WHERE COALESCE(p.existencia, 0) <= 10
+            ORDER BY p.existencia ASC
+            LIMIT %s
+        """, (limite,))
         
         resultados = cursor.fetchall()
         
@@ -1296,7 +1098,6 @@ async def imprimir_reporte_inventario(request: Request, fecha: str = None):
     Genera la vista HTML para imprimir el reporte de inventario del día seleccionado
     """
 
-    # Usar fecha actual si no se proporciona
     if not fecha:
         fecha = date.today().strftime('%Y-%m-%d')
     
@@ -1307,27 +1108,27 @@ async def imprimir_reporte_inventario(request: Request, fecha: str = None):
     try:
         cursor = connection.cursor()
 
-        # ------------------- Resumen de inventario
+        # Resumen de inventario
         cursor.execute("""
         WITH ProductosVendidos AS (
             SELECT
-                P.CODIGO_PRODUCTO,
-                P.NOMBRE_PRODUCTO,
-                P.UNIDAD_MEDIDA,
-                P.MARCA,
-                ISNULL(P.EXISTENCIA,0) AS EXISTENCIA,
-                ISNULL(SUM(PD.CANTIDAD),0) AS CANTIDAD_VENDIDA
-            FROM PRODUCTOS P
-            LEFT JOIN PEDIDOS_DET PD ON P.CODIGO_PRODUCTO = PD.CODIGO_PRODUCTO
-            LEFT JOIN PEDIDOS_ENC PE ON PD.NUMERO_PEDIDO = PE.NUMERO_PEDIDO
-                AND CONVERT(DATE, PE.FECHA) = ?
-            GROUP BY P.CODIGO_PRODUCTO, P.NOMBRE_PRODUCTO, P.UNIDAD_MEDIDA, P.MARCA, P.EXISTENCIA
+                p.codigo_producto,
+                p.nombre_producto,
+                p.unidad_medida,
+                p.marca,
+                COALESCE(p.existencia,0) AS existencia,
+                COALESCE(SUM(pd.cantidad),0) AS cantidad_vendida
+            FROM productos p
+            LEFT JOIN pedidos_det pd ON p.codigo_producto = pd.codigo_producto
+            LEFT JOIN pedidos_enc pe ON pd.numero_pedido = pe.numero_pedido
+                AND DATE(pe.fecha) = %s
+            GROUP BY p.codigo_producto, p.nombre_producto, p.unidad_medida, p.marca, p.existencia
         )
         SELECT
             COUNT(*) AS total_productos_vendidos,
-            SUM(CASE WHEN EXISTENCIA - CANTIDAD_VENDIDA >= 0 THEN 1 ELSE 0 END) AS productos_suficientes,
-            SUM(CASE WHEN EXISTENCIA - CANTIDAD_VENDIDA < 0 THEN 1 ELSE 0 END) AS productos_insuficientes,
-            SUM(CASE WHEN EXISTENCIA - CANTIDAD_VENDIDA < 0 THEN ABS(EXISTENCIA - CANTIDAD_VENDIDA) ELSE 0 END) AS total_unidades_faltantes
+            SUM(CASE WHEN existencia - cantidad_vendida >= 0 THEN 1 ELSE 0 END) AS productos_suficientes,
+            SUM(CASE WHEN existencia - cantidad_vendida < 0 THEN 1 ELSE 0 END) AS productos_insuficientes,
+            SUM(CASE WHEN existencia - cantidad_vendida < 0 THEN ABS(existencia - cantidad_vendida) ELSE 0 END) AS total_unidades_faltantes
         FROM ProductosVendidos
         """, (fecha,))
         
@@ -1339,34 +1140,34 @@ async def imprimir_reporte_inventario(request: Request, fecha: str = None):
             'total_unidades_faltantes': int(resumen[3])
         }
 
-        # ------------------- Detalle
+        # Detalle
         cursor.execute("""
         WITH ProductosVendidos AS (
             SELECT
-                P.CODIGO_PRODUCTO,
-                P.NOMBRE_PRODUCTO,
-                P.UNIDAD_MEDIDA,
-                M.NOMBRE_MARCA AS MARCA,
-                ISNULL(P.EXISTENCIA,0) AS INVENTARIO_ACTUAL,
-                SUM(PD.CANTIDAD) AS CANTIDAD_VENDIDA
-            FROM PRODUCTOS P
-            INNER JOIN MARCAS M ON P.MARCA = M.CODIGO_MARCA
-            INNER JOIN PEDIDOS_DET PD ON P.CODIGO_PRODUCTO = PD.CODIGO_PRODUCTO
-            INNER JOIN PEDIDOS_ENC PE ON PD.NUMERO_PEDIDO = PE.NUMERO_PEDIDO
-                AND CONVERT(DATE, PE.FECHA) = ?
-            GROUP BY P.CODIGO_PRODUCTO, P.NOMBRE_PRODUCTO, P.UNIDAD_MEDIDA, M.NOMBRE_MARCA, P.EXISTENCIA
+                p.codigo_producto,
+                p.nombre_producto,
+                p.unidad_medida,
+                m.nombre_marca AS marca,
+                COALESCE(p.existencia,0) AS inventario_actual,
+                SUM(pd.cantidad) AS cantidad_vendida
+            FROM productos p
+            INNER JOIN marcas m ON p.marca = m.codigo_marca
+            INNER JOIN pedidos_det pd ON p.codigo_producto = pd.codigo_producto
+            INNER JOIN pedidos_enc pe ON pd.numero_pedido = pe.numero_pedido
+                AND DATE(pe.fecha) = %s
+            GROUP BY p.codigo_producto, p.nombre_producto, p.unidad_medida, m.nombre_marca, p.existencia
         )
         SELECT
-            CODIGO_PRODUCTO,
-            NOMBRE_PRODUCTO,
-            UNIDAD_MEDIDA,
-            MARCA,
-            INVENTARIO_ACTUAL,
-            CANTIDAD_VENDIDA,
-            INVENTARIO_ACTUAL - CANTIDAD_VENDIDA AS INVENTARIO_RESULTANTE,
-            CASE WHEN INVENTARIO_ACTUAL - CANTIDAD_VENDIDA < 0 THEN ABS(INVENTARIO_ACTUAL - CANTIDAD_VENDIDA) ELSE 0 END AS FALTANTE
+            codigo_producto,
+            nombre_producto,
+            unidad_medida,
+            marca,
+            inventario_actual,
+            cantidad_vendida,
+            inventario_actual - cantidad_vendida AS inventario_resultante,
+            CASE WHEN inventario_actual - cantidad_vendida < 0 THEN ABS(inventario_actual - cantidad_vendida) ELSE 0 END AS faltante
         FROM ProductosVendidos
-        ORDER BY FALTANTE DESC, NOMBRE_PRODUCTO
+        ORDER BY faltante DESC, nombre_producto
         """, (fecha,))
 
         resultados = cursor.fetchall()
@@ -1386,8 +1187,6 @@ async def imprimir_reporte_inventario(request: Request, fecha: str = None):
 
         fecha_impresion = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
-
-        # Renderizar template del reporte
         return templates.TemplateResponse("reporte_inv_pdf.html", {
             "request": request,
             "fecha": fecha,
@@ -1404,6 +1203,7 @@ async def imprimir_reporte_inventario(request: Request, fecha: str = None):
     finally:
         cursor.close()
         connection.close()
+
 # ================================================
 # RUTAS DE PRODUCTOS
 # ================================================
@@ -1418,48 +1218,9 @@ async def get_productos_api(user: dict = Depends(require_login)):
         print(f"Error al obtener productos: {e}")
         raise HTTPException(status_code=500, detail="Error al obtener productos")
 
-@app.get("/ProductsAndPrices")
-async def get_productos_frontend(request: Request):
-    """Endpoint para obtener productos desde el frontend"""
-    try:
-        productos = await get_productos_data()
-        return templates.TemplateResponse("Products.html", {
-            "request": request, 
-            "contenido_producto": productos
-        })
-    except Exception as e:
-        print(f"Error al cargar productos: {e}")
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "error": "Error al cargar los productos"
-        })
-
-@app.post("/Producto_datos_actualizados")
-async def post_productos_actualizados(request: Request):
-    """Endpoint POST para actualizar vista de productos"""
-    try:
-        productos = await get_productos_data()
-        return templates.TemplateResponse("Products.html", {
-            "request": request, 
-            "contenido_producto": productos
-        })
-    except Exception as e:
-        print(f"Error al actualizar productos: {e}")
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "error": "Error al actualizar los productos"
-        })
-
-# ================================================
-# RUTAS DE PRODUCTOS
-# ================================================
-
-
-
-
 @app.get("/listado_productos")
 async def get_productos_listado(user: dict = Depends(require_login)):
-    """API endpoint para obtener listado completo de productos (alias)"""
+    """API endpoint para obtener listado completo de productos"""
     try:
         productos = await get_productos_data()
         return productos
@@ -1478,9 +1239,9 @@ async def insertar_producto(producto_data: dict):
     try:
         cursor = connection.cursor()
         cursor.execute("""
-            INSERT INTO PRODUCTOS (NOMBRE_PRODUCTO, UNIDAD_MEDIDA, MARCA, EXISTENCIA)
-            OUTPUT INSERTED.CODIGO_PRODUCTO
-            VALUES (?, ?, ?, ?)
+            INSERT INTO productos (nombre_producto, unidad_medida, marca, existencia)
+            VALUES (%s, %s, %s, %s)
+            RETURNING codigo_producto
         """, (
             producto_data.get('NOMBRE_PRODUCTO'),
             producto_data.get('UNIDAD_MEDIDA'),
@@ -1490,12 +1251,12 @@ async def insertar_producto(producto_data: dict):
         
         codigo_producto = cursor.fetchone()[0]
         
-        # Insertar precio si se proporcionó
+        # Insertar precio si se proporciona
         precio = producto_data.get('PRECIO')
         if precio and float(precio) > 0:
             cursor.execute("""
-                INSERT INTO PRECIOS (NIVEL_PRECIO, CODIGO_PRODUCTO, PRECIO)
-                VALUES (1, ?, ?)
+                INSERT INTO precios (nivel_precio, codigo_producto, precio)
+                VALUES (1, %s, %s)
             """, (codigo_producto, float(precio)))
         
         connection.commit()
@@ -1520,11 +1281,10 @@ async def actualizar_producto(producto_data: dict):
     try:
         cursor = connection.cursor()
         
-        # Actualizar producto
         cursor.execute("""
-            UPDATE PRODUCTOS SET
-                NOMBRE_PRODUCTO = ?, EXISTENCIA = ?, UNIDAD_MEDIDA = ?
-            WHERE CODIGO_PRODUCTO = ?
+            UPDATE productos SET
+                nombre_producto = %s, existencia = %s, unidad_medida = %s
+            WHERE codigo_producto = %s
         """, (
             producto_data.get('NOMBRE_PRODUCTO'),
             float(producto_data.get('EXISTENCIA', 0)),
@@ -1536,8 +1296,8 @@ async def actualizar_producto(producto_data: dict):
         precio = producto_data.get('PRECIO')
         if precio:
             cursor.execute("""
-                UPDATE PRECIOS SET PRECIO = ?
-                WHERE CODIGO_PRODUCTO = ? AND NIVEL_PRECIO = 1
+                UPDATE precios SET precio = %s
+                WHERE codigo_producto = %s AND nivel_precio = 1
             """, (float(precio), int(producto_data.get('Codigo'))))
         
         connection.commit()
@@ -1563,10 +1323,10 @@ async def eliminar_producto(codigo_producto: int):
         cursor = connection.cursor()
         
         # Eliminar precios primero (foreign key)
-        cursor.execute("DELETE FROM PRECIOS WHERE CODIGO_PRODUCTO = ?", (codigo_producto,))
+        cursor.execute("DELETE FROM precios WHERE codigo_producto = %s", (codigo_producto,))
         
         # Eliminar producto
-        cursor.execute("DELETE FROM PRODUCTOS WHERE CODIGO_PRODUCTO = ?", (codigo_producto,))
+        cursor.execute("DELETE FROM productos WHERE codigo_producto = %s", (codigo_producto,))
         
         if cursor.rowcount > 0:
             connection.commit()
@@ -1588,20 +1348,15 @@ async def get_marcas(user: dict = Depends(require_login)):
     connection = conexion_sql()
     
     if not connection:
-        # Datos ficticios como fallback basados en tu base de datos
         return [
             {"id": 1, "nombre": "ADAMS"},
             {"id": 2, "nombre": "BEST"},
-            {"id": 3, "nombre": "MONDELEZ"},
-            {"id": 4, "nombre": "MARINELA"},
-            {"id": 5, "nombre": "BIMBO"},
-            {"id": 6, "nombre": "COLOMBINA"},
-            {"id": 59, "nombre": "SIN MARCA"}
+            {"id": 3, "nombre": "MONDELEZ"}
         ]
     
     try:
         cursor = connection.cursor()
-        cursor.execute("SELECT CODIGO_MARCA as id, NOMBRE_MARCA as nombre FROM MARCAS ORDER BY NOMBRE_MARCA")
+        cursor.execute("SELECT codigo_marca as id, nombre_marca as nombre FROM marcas ORDER BY nombre_marca")
         marcas = cursor.fetchall()
         
         return [{
@@ -1611,34 +1366,10 @@ async def get_marcas(user: dict = Depends(require_login)):
         
     except Exception as e:
         print(f"Error al obtener marcas: {e}")
-        return [
-            {"id": 1, "nombre": "ADAMS"},
-            {"id": 2, "nombre": "BEST"},
-            {"id": 3, "nombre": "MONDELEZ"},
-            {"id": 4, "nombre": "MARINELA"},
-            {"id": 5, "nombre": "BIMBO"},
-            {"id": 6, "nombre": "COLOMBINA"},
-            {"id": 59, "nombre": "SIN MARCA"}
-        ]
+        return []
     finally:
         cursor.close()
         connection.close()
-
-@app.get("/ProductsAndPrices")
-async def get_productos_frontend(request: Request):
-    """Endpoint para obtener productos desde el frontend (HTML)"""
-    try:
-        productos = await get_productos_data()
-        return templates.TemplateResponse("Products.html", {
-            "request": request, 
-            "contenido_producto": productos
-        })
-    except Exception as e:
-        print(f"Error al cargar productos: {e}")
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "error": "Error al cargar los productos"
-        })
 
 async def get_productos_data() -> List[dict]:
     """Función auxiliar para obtener datos de productos"""
@@ -1651,21 +1382,20 @@ async def get_productos_data() -> List[dict]:
         cursor = connection.cursor()
         cursor.execute("""
             SELECT 
-                P.CODIGO_PRODUCTO, 
-                P.NOMBRE_PRODUCTO, 
-                P.UNIDAD_MEDIDA, 
-                M.NOMBRE_MARCA, 
-                P.EXISTENCIA,
-                PR.PRECIO
+                p.codigo_producto, 
+                p.nombre_producto, 
+                p.unidad_medida, 
+                m.nombre_marca, 
+                p.existencia,
+                pr.precio
             FROM 
-                PRODUCTOS P
-                INNER JOIN MARCAS M ON P.MARCA = M.CODIGO_MARCA
-                LEFT JOIN PRECIOS PR ON P.CODIGO_PRODUCTO = PR.CODIGO_PRODUCTO
-                LEFT JOIN NIVEL_PRECIO NP ON PR.NIVEL_PRECIO = NP.NIVEL_PRECIO
+                productos p
+                INNER JOIN marcas m ON p.marca = m.codigo_marca
+                LEFT JOIN precios pr ON p.codigo_producto = pr.codigo_producto
+                LEFT JOIN nivel_precio np ON pr.nivel_precio = np.nivel_precio
         """)
         contenido_producto = cursor.fetchall()
         
-        # Convertir a formato JSON
         json_data = [{
             'Codigo': row[0],
             'Nombre': row[1],
@@ -1685,38 +1415,6 @@ async def get_productos_data() -> List[dict]:
         connection.close()
 
 # ================================================
-# RUTAS DE ELIMINACIÓN
-# ================================================
-
-@app.post("/api/producto/eliminar")
-async def eliminar_producto(delete_request: DeleteProductRequest):
-    """API endpoint para eliminar producto"""
-    connection = conexion_sql()
-    
-    if not connection:
-        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
-    
-    try:
-        cursor = connection.cursor()
-        # Corregir la consulta SQL para SQL Server (no Oracle)
-        cursor.execute("DELETE FROM PRODUCTOS WHERE CODIGO_PRODUCTO = ?", (delete_request.ProductoID,))
-        
-        if cursor.rowcount > 0:
-            connection.commit()
-            return {"success": True, "message": "Producto eliminado correctamente"}
-        else:
-            connection.rollback()
-            return {"success": False, "error": "No se encontró el producto a eliminar"}
-            
-    except Exception as e:
-        connection.rollback()
-        print(f"Error al eliminar el producto: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al eliminar el producto: {str(e)}")
-    finally:
-        cursor.close()
-        connection.close()
-
-# ================================================
 # RUTAS DE CATÁLOGOS
 # ================================================
 
@@ -1730,14 +1428,14 @@ async def get_municipios(user: dict = Depends(require_login)):
     
     try:
         cursor = connection.cursor()
-        cursor.execute("SELECT MUNICIPIO as id, NOMBRE_MUNICIPIO as nombre FROM MUNICIPIOS ORDER BY NOMBRE_MUNICIPIO")
+        cursor.execute("SELECT municipio as id, nombre_municipio as nombre FROM municipios ORDER BY nombre_municipio")
         municipios = cursor.fetchall()
         
         return [{'id': row[0], 'nombre': row[1]} for row in municipios]
         
     except Exception as e:
         print(f"Error al obtener municipios: {e}")
-        return [{"id": 112, "nombre": "SAN LUCAS SACATEPEQUEZ"}]
+        return []
     finally:
         cursor.close()
         connection.close()
@@ -1752,14 +1450,14 @@ async def get_departamentos(user: dict = Depends(require_login)):
     
     try:
         cursor = connection.cursor()
-        cursor.execute("SELECT DEPARTAMENTO as id, NOMBRE_DEPARTAMENTO as nombre FROM DEPARTAMENTOS ORDER BY NOMBRE_DEPARTAMENTO")
+        cursor.execute("SELECT departamento as id, nombre_departamento as nombre FROM departamentos ORDER BY nombre_departamento")
         departamentos = cursor.fetchall()
         
         return [{'id': row[0], 'nombre': row[1]} for row in departamentos]
         
     except Exception as e:
         print(f"Error al obtener departamentos: {e}")
-        return [{"id": 16, "nombre": "SACATEPEQUEZ"}]
+        return []
     finally:
         cursor.close()
         connection.close()
@@ -1774,14 +1472,14 @@ async def get_niveles_precio(user: dict = Depends(require_login)):
     
     try:
         cursor = connection.cursor()
-        cursor.execute("SELECT NIVEL_PRECIO as id, DESCRIPCION_NIVEL as nombre FROM NIVEL_PRECIO ORDER BY NIVEL_PRECIO")
+        cursor.execute("SELECT nivel_precio as id, descripcion_nivel as nombre FROM nivel_precio ORDER BY nivel_precio")
         niveles = cursor.fetchall()
         
         return [{'id': row[0], 'nombre': row[1]} for row in niveles]
         
     except Exception as e:
         print(f"Error al obtener niveles de precio: {e}")
-        return [{"id": 1, "nombre": "TIENDA_BARRIO"}]
+        return []
     finally:
         if connection:
             cursor.close()
@@ -1797,18 +1495,18 @@ async def get_dashboard_totales(user: dict = Depends(require_login)):
     connection = conexion_sql()
     
     if not connection:
-        return {"clientes": 85, "pedidos": 0, "productos": 272}
+        return {"clientes": 0, "pedidos": 0, "productos": 0}
     
     try:
         cursor = connection.cursor()
         
-        cursor.execute("SELECT COUNT(*) FROM CLIENTES")
+        cursor.execute("SELECT COUNT(*) FROM clientes")
         total_clientes = cursor.fetchone()[0]
         
-        cursor.execute("SELECT COUNT(*) FROM PEDIDOS_ENC")
+        cursor.execute("SELECT COUNT(*) FROM pedidos_enc")
         total_pedidos = cursor.fetchone()[0]
         
-        cursor.execute("SELECT COUNT(*) FROM PRODUCTOS")
+        cursor.execute("SELECT COUNT(*) FROM productos")
         total_productos = cursor.fetchone()[0]
         
         return {
@@ -1819,7 +1517,7 @@ async def get_dashboard_totales(user: dict = Depends(require_login)):
         
     except Exception as e:
         print(f"Error al obtener totales: {e}")
-        return {"clientes": 85, "pedidos": 0, "productos": 272}
+        return {"clientes": 0, "pedidos": 0, "productos": 0}
     finally:
         cursor.close()
         connection.close()
@@ -1830,15 +1528,15 @@ async def get_clientes_por_departamento(user: dict = Depends(require_login)):
     connection = conexion_sql()
     
     if not connection:
-        return [{"departamento": "SACATEPEQUEZ", "total": 85}]
+        return []
     
     try:
         cursor = connection.cursor()
         cursor.execute("""
-            SELECT D.NOMBRE_DEPARTAMENTO as departamento, COUNT(*) as total
-            FROM CLIENTES C
-            INNER JOIN DEPARTAMENTOS D ON C.DEPARTAMENTO = D.DEPARTAMENTO
-            GROUP BY D.NOMBRE_DEPARTAMENTO
+            SELECT d.nombre_departamento as departamento, COUNT(*) as total
+            FROM clientes c
+            INNER JOIN departamentos d ON c.departamento = d.departamento
+            GROUP BY d.nombre_departamento
             ORDER BY COUNT(*) DESC
         """)
         
@@ -1847,7 +1545,7 @@ async def get_clientes_por_departamento(user: dict = Depends(require_login)):
         
     except Exception as e:
         print(f"Error al obtener clientes por departamento: {e}")
-        return [{"departamento": "SACATEPEQUEZ", "total": 85}]
+        return []
     finally:
         cursor.close()
         connection.close()
@@ -1858,16 +1556,17 @@ async def get_productos_por_marca(user: dict = Depends(require_login)):
     connection = conexion_sql()
     
     if not connection:
-        return [{"marca": "ADAMS", "total": 25}]
+        return []
     
     try:
         cursor = connection.cursor()
         cursor.execute("""
-            SELECT TOP 10 M.NOMBRE_MARCA as marca, COUNT(*) as total
-            FROM PRODUCTOS P
-            INNER JOIN MARCAS M ON P.MARCA = M.CODIGO_MARCA
-            GROUP BY M.NOMBRE_MARCA
+            SELECT m.nombre_marca as marca, COUNT(*) as total
+            FROM productos p
+            INNER JOIN marcas m ON p.marca = m.codigo_marca
+            GROUP BY m.nombre_marca
             ORDER BY COUNT(*) DESC
+            LIMIT 10
         """)
         
         resultados = cursor.fetchall()
@@ -1875,7 +1574,7 @@ async def get_productos_por_marca(user: dict = Depends(require_login)):
         
     except Exception as e:
         print(f"Error al obtener productos por marca: {e}")
-        return [{"marca": "ADAMS", "total": 25}]
+        return []
     finally:
         cursor.close()
         connection.close()
@@ -1884,80 +1583,50 @@ async def get_productos_por_marca(user: dict = Depends(require_login)):
 # RUTAS DE SALUD Y INFORMACIÓN
 # ================================================
 
-@app.get("/debug-usuarios")
-async def debug_usuarios():
-    """Endpoint para debug - mostrar estructura de usuarios (solo para desarrollo)"""
-    conn = conexion_sql()
-    if not conn:
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "message": "No se pudo conectar a la base de datos"}
-        )
-    
-    try:
-        cursor = conn.cursor()
-        
-        # Obtener estructura de la tabla
-        cursor.execute("""
-            SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_NAME = 'USUARIOS'
-            ORDER BY ORDINAL_POSITION
-        """)
-        columnas = cursor.fetchall()
-        
-        # Obtener algunos usuarios (sin mostrar contraseñas)
-        cursor.execute("""
-            SELECT TOP 5 CODIGO_USUARIO, USUARIO, NOMBRE_USUARIO, CODIGO_PERFIL
-            FROM USUARIOS
-        """)
-        usuarios = cursor.fetchall()
-        
-        return {
-            "status": "success",
-            "estructura_tabla": [
-                {
-                    "columna": col[0],
-                    "tipo": col[1],
-                    "nullable": col[2],
-                    "longitud_max": col[3]
-                }
-                for col in columnas
-            ],
-            "usuarios_ejemplo": [
-                {
-                    "codigo_usuario": usr[0],
-                    "usuario": usr[1],
-                    "nombre_usuario": usr[2],
-                    "codigo_perfil": usr[3]
-                }
-                for usr in usuarios
-            ]
-        }
-        
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "message": f"Error: {str(e)}"}
-        )
-    finally:
-        cursor.close()
-        conn.close()
-
-
 @app.get("/api/info")
 async def api_info():
     """Información de la API"""
     return {
         "name": "Gestor de Pedidos API",
         "version": "1.0.0",
-        "description": "API unificada para gestión de pedidos",
+        "database": "PostgreSQL",
+        "description": "API para gestión de pedidos con PostgreSQL",
         "endpoints": {
             "authentication": "/api/autenticacion",
             "products": "/api/productos",
             "health": "/health"
         }
     }
+
+@app.get("/health")
+async def health_check():
+    """Verificar estado de la API y conexión a base de datos"""
+    connection = conexion_sql()
+    
+    if connection:
+        try:
+            cursor = connection.cursor()
+            cursor.execute("SELECT version()")
+            db_version = cursor.fetchone()[0]
+            cursor.close()
+            connection.close()
+            
+            return {
+                "status": "healthy",
+                "database": "connected",
+                "db_version": db_version
+            }
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "database": "error",
+                "error": str(e)
+            }
+    else:
+        return {
+            "status": "unhealthy",
+            "database": "disconnected"
+        }
 
 # ================================================
 # CONFIGURACIÓN DE INICIO
