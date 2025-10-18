@@ -87,11 +87,11 @@ def conexion_sql():
     try:
         # Configuración de conexión a PostgreSQL
         connection = psycopg2.connect(
-            host="localhost",  # o tu host
+            host="dpg-d3pcushr0fns73ahqf10-a.oregon-postgres.render.com",  # o tu host
             port=5432,
             database="gestor_pedidos",
-            user="manage",
-            password="natha91275"
+            user="manager_sebaot",
+            password="ovRHNzwztDohjnzPWt70QwLxBwf7bEAc"
         )
         print("✅ Conexión exitosa a PostgreSQL")
         return connection
