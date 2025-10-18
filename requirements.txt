@@ -6,3 +6,4 @@ jinja2
 pydantic
 starlette
 python-multipart
+psycopg2
