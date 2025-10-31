@@ -55,6 +55,7 @@ class ProductResponse(BaseModel):
     Marca: Optional[str] = None
     Existencia: Optional[int] = 0
     Precio: float = 0.0
+    Disponible: bool = True  
 
 class DeleteProductRequest(BaseModel):
     ProductoID: int
@@ -78,8 +79,22 @@ class PedidoDetalle(BaseModel):
     PRECIO_UNITARIO: float
     TOTAL: float
 
-# ================================================
-# CONEXIÓN A BASE DE DATOS POSTGRESQL
+class UsuarioCreate(BaseModel):
+    usuario: str
+    clave: str
+    nombre_usuario: str
+    codigo_perfil: int
+
+class UsuarioUpdate(BaseModel):
+    usuario: str
+    nombre_usuario: str
+    codigo_perfil: int
+
+class CambiarClaveRequest(BaseModel):
+    clave: str
+
+
+# CONEXIÓN A BASE DE DATOS -- POSTGRESQL
 # ================================================
 
 def conexion_sql():
@@ -167,6 +182,23 @@ async def get_login(request: Request, user: dict = Depends(require_login)):
         "perfil": user.get("codigo_perfil")
     })
 
+
+@app.get("/usuarios")
+async def get_usuarios_page(request: Request, user: dict = Depends(require_login)):
+    """Página de gestión de usuarios"""
+    
+    # Verificar que el usuario sea administrador
+    if user.get("codigo_perfil") != 1:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "error": "No tiene permisos para acceder a esta sección"
+        })
+    
+    return templates.TemplateResponse("usuarios.html", {
+        "request": request,
+        "usuario": user.get("nombre_usuario"),
+        "perfil": user.get("codigo_perfil")
+    })
 # ================================================
 # RUTAS DE AUTENTICACIÓN
 # ================================================
@@ -546,12 +578,14 @@ async def buscar_productos(term: str):
                 COALESCE(pr.precio, 0) as Precio,
                 COALESCE(p.existencia, 0) as EXISTENCIA
             FROM productos p
-            LEFT JOIN precios pr ON p.codigo_producto = pr.codigo_producto AND pr.nivel_precio = 1
-            WHERE p.nombre_producto ILIKE %s
+            LEFT JOIN precios pr ON p.codigo_producto = pr.codigo_producto 
+                AND pr.nivel_precio = 1
+            WHERE 
+                p.disponible = TRUE
+                AND LOWER(p.nombre_producto) LIKE LOWER(%s)
             ORDER BY p.nombre_producto
             LIMIT 20
-        """, (f"%{term}%",))
-        
+        """, (f'%{term}%',))
         productos = cursor.fetchall()
         
         json_data = [{
@@ -1238,15 +1272,22 @@ async def insertar_producto(producto_data: dict):
     
     try:
         cursor = connection.cursor()
+        
+        # Obtener disponibilidad (por defecto TRUE si no se especifica)
+        disponible = producto_data.get('DISPONIBLE', True)
+        if isinstance(disponible, str):
+            disponible = disponible.lower() in ['true', '1', 'yes', 'si']
+        
         cursor.execute("""
-            INSERT INTO productos (nombre_producto, unidad_medida, marca, existencia)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO productos (nombre_producto, unidad_medida, marca, existencia, disponible)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING codigo_producto
         """, (
             producto_data.get('NOMBRE_PRODUCTO'),
             producto_data.get('UNIDAD_MEDIDA'),
             int(producto_data.get('MARCA')),
-            float(producto_data.get('EXISTENCIA', 0))
+            float(producto_data.get('EXISTENCIA', 0)),
+            disponible  # NUEVO CAMPO
         ))
         
         codigo_producto = cursor.fetchone()[0]
@@ -1311,6 +1352,91 @@ async def actualizar_producto(producto_data: dict):
         cursor.close()
         connection.close()
 
+@app.post("/api/productos/cambiar_disponibilidad")
+async def cambiar_disponibilidad_producto(data: dict):
+    """Cambiar el estado de disponibilidad de un producto"""
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        
+        codigo_producto = int(data.get('codigo_producto'))
+        disponible = bool(data.get('disponible'))
+        
+        cursor.execute("""
+            UPDATE productos 
+            SET disponible = %s
+            WHERE codigo_producto = %s
+        """, (disponible, codigo_producto))
+        
+        connection.commit()
+        
+        estado = "disponible" if disponible else "no disponible"
+        
+        return {
+            "success": True, 
+            "message": f"Producto marcado como {estado}",
+            "disponible": disponible
+        }
+        
+    except Exception as e:
+        connection.rollback()
+        print(f"Error al cambiar disponibilidad: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al cambiar disponibilidad: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.get("/listado_productos_disponibles")
+async def get_productos_disponibles(user: dict = Depends(require_login)):
+    """API endpoint para obtener solo productos disponibles"""
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT 
+                p.codigo_producto,
+                p.nombre_producto,
+                p.unidad_medida,
+                m.nombre_marca,
+                COALESCE(p.existencia, 0) as existencia,
+                COALESCE(pr.precio, 0) as precio
+            FROM productos p
+            INNER JOIN marcas m ON p.marca = m.codigo_marca
+            LEFT JOIN precios pr ON p.codigo_producto = pr.codigo_producto
+                AND pr.nivel_precio = 1
+            WHERE p.disponible = TRUE
+            ORDER BY p.nombre_producto
+        """)
+        
+        productos = cursor.fetchall()
+        
+        json_data = [{
+            'Codigo': row[0],
+            'Nombre': row[1],
+            'Medida': row[2],
+            'Marca': row[3],
+            'Existencia': float(row[4]),
+            'Precio': float(row[5]) if row[5] is not None else 0.0
+        } for row in productos]
+        
+        return json_data
+        
+    except Exception as e:
+        print(f"Error al obtener productos disponibles: {e}")
+        raise HTTPException(status_code=500, detail="Error al obtener productos disponibles")
+    finally:
+        cursor.close()
+        connection.close()
+
+
 @app.delete("/api/productos/{codigo_producto}")
 async def eliminar_producto(codigo_producto: int):
     """Eliminar producto"""
@@ -1373,27 +1499,30 @@ async def get_marcas(user: dict = Depends(require_login)):
 
 async def get_productos_data() -> List[dict]:
     """Función auxiliar para obtener datos de productos"""
+    """Obtener datos de productos con disponibilidad"""
     connection = conexion_sql()
     
     if not connection:
-        raise Exception("No se pudo establecer conexión a la base de datos")
+        raise Exception("No se pudo conectar a la base de datos")
     
     try:
         cursor = connection.cursor()
         cursor.execute("""
             SELECT 
-                p.codigo_producto, 
-                p.nombre_producto, 
-                p.unidad_medida, 
-                m.nombre_marca, 
-                p.existencia,
-                pr.precio
-            FROM 
-                productos p
-                INNER JOIN marcas m ON p.marca = m.codigo_marca
-                LEFT JOIN precios pr ON p.codigo_producto = pr.codigo_producto
-                LEFT JOIN nivel_precio np ON pr.nivel_precio = np.nivel_precio
+                p.codigo_producto,
+                p.nombre_producto,
+                p.unidad_medida,
+                m.nombre_marca,
+                COALESCE(p.existencia, 0) as existencia,
+                COALESCE(pr.precio, 0) as precio,
+                COALESCE(p.disponible, TRUE) as disponible
+            FROM productos p
+            INNER JOIN marcas m ON p.marca = m.codigo_marca
+            LEFT JOIN precios pr ON p.codigo_producto = pr.codigo_producto
+                AND pr.nivel_precio = 1
+            ORDER BY p.nombre_producto
         """)
+        
         contenido_producto = cursor.fetchall()
         
         json_data = [{
@@ -1401,8 +1530,9 @@ async def get_productos_data() -> List[dict]:
             'Nombre': row[1],
             'Medida': row[2],
             'Marca': row[3],
-            'Existencia': row[4],
-            'Precio': row[5] if row[5] is not None else 0.0
+            'Existencia': float(row[4]),
+            'Precio': float(row[5]) if row[5] is not None else 0.0,
+            'Disponible': row[6]  # NUEVO CAMPO
         } for row in contenido_producto]
         
         return json_data
@@ -1414,24 +1544,345 @@ async def get_productos_data() -> List[dict]:
         cursor.close()
         connection.close()
 
+
+# ================================================
+# RUTAS DE USUARIOS
+# ================================================
+
+@app.get("/api/usuarios")
+async def get_usuarios(user: dict = Depends(require_login)):
+    """Obtener listado de usuarios"""
+    
+    # Verificar permisos de administrador
+    if user.get("codigo_perfil") != 1:
+        raise HTTPException(status_code=403, detail="No tiene permisos para ver usuarios")
+    
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="Error de conexión a base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT 
+                u.codigo_usuario,
+                u.usuario,
+                u.nombre_usuario,
+                u.fecha_registro,
+                u.codigo_perfil,
+                p.descripcion as perfil_descripcion
+            FROM usuarios u
+            INNER JOIN perfil p ON u.codigo_perfil = p.codigo_perfil
+            ORDER BY u.codigo_usuario DESC
+        """)
+        
+        usuarios = cursor.fetchall()
+        
+        return [{
+            'codigo_usuario': row[0],
+            'usuario': row[1],
+            'nombre_usuario': row[2],
+            'fecha_registro': row[3].isoformat() if row[3] else None,
+            'codigo_perfil': row[4],
+            'perfil_descripcion': row[5]
+        } for row in usuarios]
+        
+    except Exception as e:
+        print(f"Error al obtener usuarios: {e}")
+        raise HTTPException(status_code=500, detail="Error al obtener usuarios")
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.get("/api/perfiles")
+async def get_perfiles(user: dict = Depends(require_login)):
+    """Obtener listado de perfiles"""
+    
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="Error de conexión a base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT codigo_perfil, descripcion
+            FROM perfil
+            ORDER BY codigo_perfil
+        """)
+        
+        perfiles = cursor.fetchall()
+        
+        return [{
+            'codigo_perfil': row[0],
+            'descripcion': row[1]
+        } for row in perfiles]
+        
+    except Exception as e:
+        print(f"Error al obtener perfiles: {e}")
+        raise HTTPException(status_code=500, detail="Error al obtener perfiles")
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.post("/api/usuarios")
+async def crear_usuario(usuario_data: UsuarioCreate, user: dict = Depends(require_login)):
+    """Crear nuevo usuario - SIN BCRYPT (contraseña en texto plano)"""
+    
+    # Verificar permisos de administrador
+    if user.get("codigo_perfil") != 1:
+        raise HTTPException(status_code=403, detail="No tiene permisos para crear usuarios")
+    
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="Error de conexión a base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Verificar si el usuario ya existe
+        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE usuario = %s", (usuario_data.usuario,))
+        existe = cursor.fetchone()[0]
+        
+        if existe > 0:
+            raise HTTPException(status_code=400, detail="El usuario ya existe")
+        
+        # Insertar usuario CON CONTRASEÑA EN TEXTO PLANO
+        cursor.execute("""
+            INSERT INTO usuarios (usuario, clave, nombre_usuario, fecha_registro, codigo_perfil)
+            VALUES (%s, %s, %s, NOW(), %s)
+            RETURNING codigo_usuario
+        """, (
+            usuario_data.usuario,
+            usuario_data.clave,  # ← Contraseña en texto plano
+            usuario_data.nombre_usuario,
+            usuario_data.codigo_perfil
+        ))
+        
+        codigo_usuario = cursor.fetchone()[0]
+        connection.commit()
+        
+        return {
+            "success": True,
+            "message": "Usuario creado correctamente",
+            "codigo_usuario": codigo_usuario
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error al crear usuario: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al crear usuario: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.put("/api/usuarios/{codigo_usuario}")
+async def actualizar_usuario(
+    codigo_usuario: int, 
+    usuario_data: UsuarioUpdate, 
+    user: dict = Depends(require_login)
+):
+    """Actualizar usuario existente"""
+    
+    # Verificar permisos de administrador
+    if user.get("codigo_perfil") != 1:
+        raise HTTPException(status_code=403, detail="No tiene permisos para actualizar usuarios")
+    
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="Error de conexión a base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Verificar si el usuario existe
+        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE codigo_usuario = %s", (codigo_usuario,))
+        existe = cursor.fetchone()[0]
+        
+        if existe == 0:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Verificar si el nuevo nombre de usuario ya existe (excepto el actual)
+        cursor.execute("""
+            SELECT COUNT(*) FROM usuarios 
+            WHERE usuario = %s AND codigo_usuario != %s
+        """, (usuario_data.usuario, codigo_usuario))
+        
+        existe_otro = cursor.fetchone()[0]
+        
+        if existe_otro > 0:
+            raise HTTPException(status_code=400, detail="El usuario ya existe")
+        
+        # Actualizar usuario
+        cursor.execute("""
+            UPDATE usuarios
+            SET usuario = %s,
+                nombre_usuario = %s,
+                codigo_perfil = %s
+            WHERE codigo_usuario = %s
+        """, (
+            usuario_data.usuario,
+            usuario_data.nombre_usuario,
+            usuario_data.codigo_perfil,
+            codigo_usuario
+        ))
+        
+        connection.commit()
+        
+        return {
+            "success": True,
+            "message": "Usuario actualizado correctamente"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error al actualizar usuario: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al actualizar usuario: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.delete("/api/usuarios/{codigo_usuario}")
+async def eliminar_usuario(codigo_usuario: int, user: dict = Depends(require_login)):
+    """Eliminar usuario"""
+    
+    # Verificar permisos de administrador
+    if user.get("codigo_perfil") != 1:
+        raise HTTPException(status_code=403, detail="No tiene permisos para eliminar usuarios")
+    
+    # No permitir eliminar el propio usuario
+    if user.get("user_id") == codigo_usuario:
+        raise HTTPException(status_code=400, detail="No puede eliminar su propio usuario")
+    
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="Error de conexión a base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Verificar si el usuario existe
+        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE codigo_usuario = %s", (codigo_usuario,))
+        existe = cursor.fetchone()[0]
+        
+        if existe == 0:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Verificar si el usuario tiene pedidos asociados
+        cursor.execute("SELECT COUNT(*) FROM pedidos_enc WHERE codigo_usuario = %s", (codigo_usuario,))
+        tiene_pedidos = cursor.fetchone()[0]
+        
+        if tiene_pedidos > 0:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"No se puede eliminar el usuario porque tiene {tiene_pedidos} pedido(s) asociado(s)"
+            )
+        
+        # Eliminar usuario
+        cursor.execute("DELETE FROM usuarios WHERE codigo_usuario = %s", (codigo_usuario,))
+        connection.commit()
+        
+        return {
+            "success": True,
+            "message": "Usuario eliminado correctamente"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error al eliminar usuario: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al eliminar usuario: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.post("/api/usuarios/{codigo_usuario}/cambiar-clave")
+async def cambiar_clave(
+    codigo_usuario: int, 
+    clave_data: CambiarClaveRequest, 
+    user: dict = Depends(require_login)
+):
+    """Cambiar contraseña de un usuario - SIN BCRYPT (contraseña en texto plano)"""
+    
+    # Verificar permisos: administrador o el propio usuario
+    if user.get("codigo_perfil") != 1 and user.get("user_id") != codigo_usuario:
+        raise HTTPException(status_code=403, detail="No tiene permisos para cambiar esta contraseña")
+    
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="Error de conexión a base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Verificar si el usuario existe
+        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE codigo_usuario = %s", (codigo_usuario,))
+        existe = cursor.fetchone()[0]
+        
+        if existe == 0:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Actualizar contraseña EN TEXTO PLANO
+        cursor.execute("""
+            UPDATE usuarios
+            SET clave = %s
+            WHERE codigo_usuario = %s
+        """, (clave_data.clave, codigo_usuario))  # ← Contraseña en texto plano
+        
+        connection.commit()
+        
+        return {
+            "success": True,
+            "message": "Contraseña actualizada correctamente"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error al cambiar contraseña: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al cambiar contraseña: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
 # ================================================
 # RUTAS DE CATÁLOGOS
 # ================================================
 
 @app.get("/listado_municipios")
 async def get_municipios(user: dict = Depends(require_login)):
-    """Obtener listado de municipios"""
+    """Obtener listado de municipios con información del departamento"""
     connection = conexion_sql()
     
     if not connection:
-        return [{"id": 112, "nombre": "SAN LUCAS SACATEPEQUEZ"}]
+        return [{"id": 112, "nombre": "SAN LUCAS SACATEPEQUEZ", "departamento_id": 16}]
     
     try:
         cursor = connection.cursor()
-        cursor.execute("SELECT municipio as id, nombre_municipio as nombre FROM municipios ORDER BY nombre_municipio")
+        cursor.execute("""
+            SELECT municipio as id, nombre_municipio as nombre, departamento as departamento_id 
+            FROM municipios 
+            ORDER BY nombre_municipio
+        """)
         municipios = cursor.fetchall()
         
-        return [{'id': row[0], 'nombre': row[1]} for row in municipios]
+        return [{'id': row[0], 'nombre': row[1], 'departamento_id': row[2]} for row in municipios]
         
     except Exception as e:
         print(f"Error al obtener municipios: {e}")
@@ -1439,6 +1890,35 @@ async def get_municipios(user: dict = Depends(require_login)):
     finally:
         cursor.close()
         connection.close()
+
+@app.get("/listado_municipios_por_departamento/{departamento_id}")
+async def get_municipios_por_departamento(departamento_id: int, user: dict = Depends(require_login)):
+    """Obtener listado de municipios filtrados por departamento"""
+    connection = conexion_sql()
+    
+    if not connection:
+        return []
+    
+    try:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT municipio as id, nombre_municipio as nombre, departamento as departamento_id 
+            FROM municipios 
+            WHERE departamento = %s
+            ORDER BY nombre_municipio
+        """, (departamento_id,))
+        
+        municipios = cursor.fetchall()
+        
+        return [{'id': row[0], 'nombre': row[1], 'departamento_id': row[2]} for row in municipios]
+        
+    except Exception as e:
+        print(f"Error al obtener municipios por departamento: {e}")
+        return []
+    finally:
+        cursor.close()
+        connection.close()
+
 
 @app.get("/listado_departamentos")
 async def get_departamentos(user: dict = Depends(require_login)):

@@ -358,6 +358,13 @@
                     Reporte de Inventario
                 </div>
             </a>
+            <div class="nav-header">Sistema</div>
+            <a href="/usuarios" class="nav-item" style="background-color: var(--hover-blue);">
+                <div class="nav-item-content">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Usuarios</span>
+                </div>
+            </a>
         </div>
         <div style="margin-top: auto; padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
             <div style="display: flex; align-items: center; margin-bottom: 1rem;">
@@ -545,18 +552,18 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Municipio <span class="text-danger">*</span></label>
-                                    <select class="form-select" name="Municipio" required>
-                                        <option value="">Seleccione un municipio</option>
+                                    <label class="form-label">Departamento <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="Departamento" required>
+                                        <option value="">Seleccione un departamento</option>
                                         <!-- Se llena dinámicamente -->
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Departamento <span class="text-danger">*</span></label>
-                                    <select class="form-select" name="Departamento" required>
-                                        <option value="">Seleccione un departamento</option>
+                                    <label class="form-label">Municipio <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="Municipio" required>
+                                        <option value="">Seleccione un municipio</option>
                                         <!-- Se llena dinámicamente -->
                                     </select>
                                 </div>
@@ -631,18 +638,18 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Municipio <span class="text-danger">*</span></label>
-                                    <select class="form-select" name="Municipio" required>
-                                        <option value="">Seleccione un municipio</option>
+                                    <label class="form-label">Departamento <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="Departamento" required>
+                                        <option value="">Seleccione un departamento</option>
                                         <!-- Se llena dinámicamente -->
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Departamento <span class="text-danger">*</span></label>
-                                    <select class="form-select" name="Departamento" required>
-                                        <option value="">Seleccione un departamento</option>
+                                    <label class="form-label">Municipio <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="Municipio" required>
+                                        <option value="">Seleccione un municipio</option>
                                         <!-- Se llena dinámicamente -->
                                     </select>
                                 </div>
@@ -694,6 +701,7 @@
         // Variables globales
         let dataTable;
         let clientesData = [];
+        let municipiosData = [];
 
         // Inicialización
         document.addEventListener('DOMContentLoaded', function () {
@@ -897,6 +905,7 @@
                 // Cargar municipios
                 const municipiosResponse = await fetch('/listado_municipios');
                 const municipios = await municipiosResponse.json();
+                municipiosData = municipios; // Guardar en variable global
                 
                 // Cargar departamentos
                 const departamentosResponse = await fetch('/listado_departamentos');
@@ -908,6 +917,9 @@
                 
                 // Llenar dropdowns
                 llenarDropdowns(municipios, departamentos, niveles);
+                
+                //Configurar los event listeners para el filtrado
+                configurarFiltroMunicipios();
                 
                 console.log('✅ Catálogos cargados');
                 
@@ -943,6 +955,93 @@
                 niveles.forEach(nivel => {
                     select.innerHTML += `<option value="${nivel.id}">${nivel.nombre}</option>`;
                 });
+            });
+        }
+
+        // Configurar filtrado de municipios
+        function configurarFiltroMunicipios() {
+            console.log('⚙️ Configurando filtro de municipios...');
+            
+            // Para el formulario de INSERTAR
+            const deptInsertarSelect = document.querySelector('#formInsertar select[name="Departamento"]');
+            const munInsertarSelect = document.querySelector('#formInsertar select[name="Municipio"]');
+            
+            if (deptInsertarSelect && munInsertarSelect) {
+                // Deshabilitar municipio inicialmente
+                munInsertarSelect.disabled = true;
+                munInsertarSelect.innerHTML = '<option value="">Primero seleccione un departamento</option>';
+                
+                // Event listener para cambio de departamento
+                deptInsertarSelect.addEventListener('change', function() {
+                    const departamentoId = this.value;
+                    
+                    if (departamentoId) {
+                        filtrarMunicipiosPorDepartamento(departamentoId, munInsertarSelect);
+                        munInsertarSelect.disabled = false;
+                    } else {
+                        munInsertarSelect.innerHTML = '<option value="">Primero seleccione un departamento</option>';
+                        munInsertarSelect.disabled = true;
+                    }
+                });
+            }
+            
+            // Para el formulario de EDITAR
+            const deptEditarSelect = document.querySelector('#formEditar select[name="Departamento"]');
+            const munEditarSelect = document.querySelector('#formEditar select[name="Municipio"]');
+            
+            if (deptEditarSelect && munEditarSelect) {
+                // Event listener para cambio de departamento
+                deptEditarSelect.addEventListener('change', function() {
+                    const departamentoId = this.value;
+                    
+                    if (departamentoId) {
+                        filtrarMunicipiosPorDepartamento(departamentoId, munEditarSelect);
+                        munEditarSelect.disabled = false;
+                    } else {
+                        munEditarSelect.innerHTML = '<option value="">Primero seleccione un departamento</option>';
+                        munEditarSelect.disabled = true;
+                    }
+                });
+            }
+            
+            console.log('✅ Filtro de municipios configurado');
+        }
+
+        // Filtrar municipios por departamento
+        async function filtrarMunicipiosPorDepartamento(departamentoId, selectElement) {
+            console.log('🔍 Filtrando municipios para departamento:', departamentoId);
+            
+            try {
+                // Intentar usar el endpoint específico de filtrado
+                const response = await fetch(`/listado_municipios_por_departamento/${departamentoId}`);
+                
+                if (response.ok) {
+                    const municipiosFiltrados = await response.json();
+                    llenarSelectMunicipios(municipiosFiltrados, selectElement);
+                    console.log(`✅ ${municipiosFiltrados.length} municipios filtrados`);
+                } else {
+                    // Fallback: filtrar localmente si el endpoint falla
+                    console.log('⚠️ Usando filtrado local de municipios');
+                    const municipiosFiltrados = todosLosMunicipios.filter(
+                        m => m.departamento_id == departamentoId
+                    );
+                    llenarSelectMunicipios(municipiosFiltrados, selectElement);
+                }
+            } catch (error) {
+                console.error('❌ Error al filtrar municipios:', error);
+                // Fallback: filtrar localmente
+                const municipiosFiltrados = todosLosMunicipios.filter(
+                    m => m.departamento_id == departamentoId
+                );
+                llenarSelectMunicipios(municipiosFiltrados, selectElement);
+            }
+        }
+
+        // Llenar select de municipios
+        function llenarSelectMunicipios(municipios, selectElement) {
+            selectElement.innerHTML = '<option value="">Seleccione un municipio</option>';
+            municipios.forEach(municipio => {
+                selectElement.innerHTML += `<option value="${municipio.id}">${municipio.nombre}</option>`;
             });
         }
 
@@ -1064,20 +1163,45 @@
             
             const form = document.getElementById('formEditar');
             
-            // Llenar campos del formulario
+            // Llenar campos básicos del formulario
             Object.keys(cliente).forEach(key => {
                 const input = form.elements[key];
-                if (input) {
-                    if (input.tagName === 'SELECT') {
-                        // Para selects, esperar un momento para que se llenen las opciones
-                        setTimeout(() => {
-                            input.value = cliente[key];
-                        }, 100);
-                    } else {
-                        input.value = cliente[key] || '';
-                    }
+                if (input && input.tagName !== 'SELECT') {
+                    input.value = cliente[key] || '';
                 }
             });
+            
+            // Manejar selectores especiales con async
+            setTimeout(async () => {
+                // Buscar IDs de departamento y nivel de precio
+                const departamentos = Array.from(form.elements['Departamento'].options);
+                const niveles = Array.from(form.elements['Nivel_Precio'].options);
+                
+                // Seleccionar departamento por nombre
+                const deptOption = departamentos.find(opt => opt.text === cliente.Departamento);
+                if (deptOption) {
+                    form.elements['Departamento'].value = deptOption.value;
+                    
+                    // Cargar municipios del departamento seleccionado
+                    const munSelect = form.elements['Municipio'];
+                    await filtrarMunicipiosPorDepartamento(deptOption.value, munSelect);
+                    
+                    // Después de cargar los municipios, seleccionar el correcto
+                    setTimeout(() => {
+                        const municipios = Array.from(munSelect.options);
+                        const munOption = municipios.find(opt => opt.text === cliente.Municipio);
+                        if (munOption) {
+                            munSelect.value = munOption.value;
+                        }
+                    }, 100);
+                }
+                
+                // Seleccionar nivel de precio por nombre
+                const nivelOption = niveles.find(opt => opt.text === cliente.Nivel_Precio);
+                if (nivelOption) {
+                    form.elements['Nivel_Precio'].value = nivelOption.value;
+                }
+            }, 100);
             
             // Mostrar modal
             const modal = new bootstrap.Modal(document.getElementById('modalEditar'));

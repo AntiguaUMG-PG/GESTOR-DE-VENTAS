@@ -487,6 +487,467 @@
             }
         }
 
+        @media (max-width: 768px) {
+            /* Sidebar móvil */
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 2000;
+                width: 280px;
+                box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            /* Overlay cuando el sidebar está abierto */
+            .sidebar.show::after {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 280px;
+                width: calc(100vw - 280px);
+                height: 100vh;
+                background: rgba(0,0,0,0.5);
+                z-index: -1;
+            }
+
+            /* Botón de menú móvil */
+            .mobile-menu-btn {
+                display: block;
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                z-index: 1001;
+                background: var(--primary-blue);
+                color: white;
+                border: none;
+                padding: 0.75rem 1rem;
+                border-radius: 0.5rem;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            }
+
+            .mobile-menu-btn:active {
+                transform: scale(0.95);
+            }
+
+            /* Contenido principal */
+            #wrapper {
+                margin-left: 0;
+            }
+
+            #content {
+                padding: 1rem;
+                margin-top: 60px; /* Espacio para el botón del menú */
+            }
+
+            /* Barra de usuario */
+            .user-bar {
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .user-info {
+                margin-left: 0;
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            /* Formulario de pedido */
+            .card {
+                margin-bottom: 1rem;
+            }
+
+            .card-body {
+                padding: 1rem;
+            }
+
+            /* Formulario de cliente */
+            .row {
+                margin: 0 -0.5rem;
+            }
+
+            .col-md-6,
+            .col-md-4,
+            .col-md-8 {
+                padding: 0 0.5rem;
+                margin-bottom: 0.75rem;
+            }
+
+            /* Inputs más grandes para móvil */
+            .form-control,
+            .form-select {
+                font-size: 16px; /* Previene zoom en iOS */
+                padding: 0.75rem;
+                min-height: 44px; /* Tamaño mínimo táctil */
+            }
+
+            /* Botones más grandes */
+            .btn {
+                padding: 0.75rem 1rem;
+                font-size: 16px;
+                min-height: 44px;
+            }
+
+            .btn-sm {
+                padding: 0.5rem 0.75rem;
+                font-size: 14px;
+                min-height: 38px;
+            }
+
+            /* Tabla de productos en el pedido */
+            #detalleOrden {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #detalleOrden table {
+                font-size: 14px;
+                min-width: 600px; /* Permite scroll horizontal */
+            }
+
+            #detalleOrden th,
+            #detalleOrden td {
+                padding: 0.5rem;
+                white-space: nowrap;
+            }
+
+            /* Ocultar columnas menos importantes en móvil */
+            #detalleOrden .d-none-mobile {
+                display: none;
+            }
+
+            /* Total del pedido más visible */
+            #totalOrden {
+                font-size: 1.5rem;
+                font-weight: bold;
+            }
+
+            /* Modal responsive */
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+
+            .modal-lg {
+                max-width: 95%;
+            }
+
+            /* Autocomplete más grande */
+            .ui-autocomplete {
+                max-height: 300px;
+                overflow-y: auto;
+                font-size: 16px;
+            }
+
+            .ui-menu-item {
+                padding: 0.75rem;
+                border-bottom: 1px solid #eee;
+            }
+
+            /* Estadísticas en columna */
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+                gap: 0.75rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            /* DataTables responsive */
+            .dataTables_wrapper {
+                font-size: 14px;
+            }
+
+            .dataTables_filter input {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+
+            .dataTables_length select {
+                width: auto;
+            }
+
+            /* Paginación más compacta */
+            .pagination {
+                flex-wrap: wrap;
+                gap: 0.25rem;
+            }
+
+            .page-link {
+                padding: 0.5rem 0.75rem;
+                font-size: 14px;
+            }
+        }
+
+        /* ========================================================================== */
+        /* RESPONSIVE PARA MÓVILES PEQUEÑOS (menos de 480px) */
+        /* ========================================================================== */
+
+        @media (max-width: 480px) {
+            /* Sidebar más estrecho */
+            .sidebar {
+                width: 100%;
+                max-width: 280px;
+            }
+
+            /* Contenido más compacto */
+            #content {
+                padding: 0.5rem;
+            }
+
+            /* Títulos más pequeños */
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            h2 {
+                font-size: 1.25rem;
+            }
+
+            h3 {
+                font-size: 1.1rem;
+            }
+
+            /* Cards sin margen lateral */
+            .card {
+                margin-left: -0.5rem;
+                margin-right: -0.5rem;
+                border-radius: 0;
+            }
+
+            /* Botones en columna */
+            .btn-group,
+            .d-flex.gap-2 {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn-group .btn,
+            .d-flex.gap-2 .btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+
+            /* Campos de formulario en columna */
+            .row > [class*='col-'] {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            /* Tabla más compacta */
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 0.25rem !important;
+            }
+
+            /* Logo más pequeño */
+            .logo {
+                font-size: 1rem;
+                padding: 1rem;
+            }
+
+            /* Modal a pantalla completa */
+            .modal-dialog {
+                margin: 0;
+                max-width: 100%;
+                height: 100vh;
+            }
+
+            .modal-content {
+                height: 100vh;
+                border-radius: 0;
+            }
+
+            .modal-body {
+                overflow-y: auto;
+                max-height: calc(100vh - 150px);
+            }
+        }
+
+        /* ========================================================================== */
+        /* MEJORAS DE USABILIDAD TÁCTIL */
+        /* ========================================================================== */
+
+        @media (hover: none) and (pointer: coarse) {
+            /* Dispositivos táctiles */
+            
+            /* Áreas táctiles más grandes */
+            button,
+            a,
+            .nav-item,
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            /* Feedback visual al tocar */
+            button:active,
+            .btn:active,
+            .nav-item:active {
+                opacity: 0.7;
+                transform: scale(0.98);
+            }
+
+            /* Scroll suave */
+            * {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Selects nativos en móvil */
+            select {
+                -webkit-appearance: menulist;
+                appearance: menulist;
+            }
+        }
+
+        /* ========================================================================== */
+        /* OPTIMIZACIONES PARA ORIENTACIÓN HORIZONTAL (LANDSCAPE) */
+        /* ========================================================================== */
+
+        @media (max-width: 768px) and (orientation: landscape) {
+            .sidebar {
+                width: 240px;
+            }
+
+            #content {
+                padding: 1rem 2rem;
+            }
+
+            /* Usar mejor el espacio horizontal */
+            .row > [class*='col-md-'] {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+        }
+
+        /* ========================================================================== */
+        /* ESTILOS ADICIONALES PARA MEJORAR LA EXPERIENCIA MÓVIL */
+        /* ========================================================================== */
+
+        /* Prevenir zoom en inputs en iOS */
+        @supports (-webkit-touch-callout: none) {
+            input[type="text"],
+            input[type="number"],
+            input[type="email"],
+            input[type="tel"],
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+        }
+
+        /* Scroll horizontal para tablas en móvil */
+        .table-responsive {
+            -webkit-overflow-scrolling: touch;
+            border-radius: 0.5rem;
+        }
+
+            @keyframes slideHint {
+                0%, 100% { transform: translateY(-50%) translateX(0); }
+                50% { transform: translateY(-50%) translateX(-10px); }
+            }
+
+            .table-responsive.scrolled::after {
+                display: none;
+            }
+
+        /* Loading spinner responsive */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        /* SweetAlert responsive */
+        @media (max-width: 768px) {
+            .swal2-popup {
+                width: 90% !important;
+                padding: 1rem !important;
+            }
+
+            .swal2-title {
+                font-size: 1.25rem !important;
+            }
+
+            .swal2-html-container {
+                font-size: 0.9rem !important;
+            }
+        }
+
+        /* ========================================================================== */
+        /* FIX PARA PROBLEMAS COMUNES EN MÓVILES */
+        /* ========================================================================== */
+
+        /* Prevenir selección accidental de texto */
+        .nav-item,
+        .btn,
+        button {
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Ocultar scrollbar en móvil pero mantener funcionalidad */
+        @media (max-width: 768px) {
+            .sidebar::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            .sidebar::-webkit-scrollbar-track {
+                background: rgba(255, 255, 255, 0.1);
+            }
+
+            .sidebar::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 2px;
+            }
+        }
+
+        /* ========================================================================== */
+        /* IMPRESIÓN (mantener existente) */
+        /* ========================================================================== */
+
+        @media print {
+            .sidebar,
+            .mobile-menu-btn,
+            .user-bar,
+            .btn,
+            .no-print {
+                display: none !important;
+            }
+
+            #wrapper {
+                margin-left: 0 !important;
+            }
+
+            #content {
+                padding: 0 !important;
+            }
+
+            .table {
+                font-size: 10px;
+            }
+        }
+
         
     </style>
 </head>
@@ -537,6 +998,13 @@
                 <div class="nav-item-content">
                     <i class="fas fa-chart-line"></i>
                     Reporte de Inventario
+                </div>
+            </a>
+            <div class="nav-header">Sistema</div>
+            <a href="/usuarios" class="nav-item" style="background-color: var(--hover-blue);">
+                <div class="nav-item-content">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Usuarios</span>
                 </div>
             </a>
         </div>
@@ -642,12 +1110,47 @@
                                 
                                 <div class="form-group">
                                     <label for="productos">Productos</label>
-                                    <table class="table table-bordered" id="productosTable" width="100%" cellspacing="0">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered" id="productosTable" width="100%" cellspacing="0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Codigo</th>
+                                                    <th>Producto</th>
+                                                    <th>Presentacion</th>
+                                                    <th>Cantidad</th>
+                                                    <th>Precio</th>
+                                                    <th>Total</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><input type="text" class="form-control" id="codigoProducto" readonly></td>
+                                                    <td>
+                                                        <div class="form-group">
+                                                            <input type="text" class="form-control" id="producto" 
+                                                                placeholder="Buscar producto...">
+                                                        </div>
+                                                    </td>
+                                                    <td><input type="text" class="form-control" id="presentacion" readonly></td>
+                                                    <td>
+                                                        <input type="number" class="form-control" id="cantidadProducto" min="1">
+                                                        <input type="hidden" id="stockDisponible">
+                                                    </td>
+                                                    <td><input type="number" class="form-control" id="precioProducto" readonly></td>
+                                                    <td><input type="number" class="form-control" id="totalProducto" readonly></td>
+                                                    <td><button type="button" id="agregarProducto" class="btn btn-primary">Agregar</button></td>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table id="detalleOrden" class="table table-bordered">
                                         <thead>
                                             <tr>
-                                                <th>Codigo</th>
+                                                <th>Código</th>
                                                 <th>Producto</th>
-                                                <th>Presentacion</th>
+                                                <th>Presentación</th>
                                                 <th>Cantidad</th>
                                                 <th>Precio</th>
                                                 <th>Total</th>
@@ -655,40 +1158,9 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
-                                                <td><input type="text" class="form-control" id="codigoProducto" readonly></td>
-                                                <td>
-                                                    <div class="form-group">
-                                                        <input type="text" class="form-control" id="producto" 
-                                                               placeholder="Buscar producto...">
-                                                    </div>
-                                                </td>
-                                                <td><input type="text" class="form-control" id="presentacion" readonly></td>
-                                                <td>
-                                                    <input type="number" class="form-control" id="cantidadProducto" min="1">
-                                                    <input type="hidden" id="stockDisponible">
-                                                </td>
-                                                <td><input type="number" class="form-control" id="precioProducto" readonly></td>
-                                                <td><input type="number" class="form-control" id="totalProducto" readonly></td>
-                                                <td><button type="button" id="agregarProducto" class="btn btn-primary">Agregar</button></td>
                                         </tbody>
                                     </table>
                                 </div>
-                                <table id="detalleOrden" class="table table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>Código</th>
-                                            <th>Producto</th>
-                                            <th>Presentación</th>
-                                            <th>Cantidad</th>
-                                            <th>Precio</th>
-                                            <th>Total</th>
-                                            <th>Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    </tbody>
-                                </table>
 
                                 <!-- Aquí es donde agregas el total general -->
                                 <div class="row">
@@ -751,22 +1223,24 @@
                 </div>
                 <div class="modal-body">
                     <input type="text" id="buscarCliente" class="form-control mb-3" placeholder="Buscar cliente...">
-                    <table class="table table-bordered" id="clientesTable" width="100%" cellspacing="0">
-                        <thead>
-                            <tr>
-                                <th>Código</th>
-                                <th>Nombre</th>
-                                <th>Nombre Negocio</th>
-                                <th>NIT</th>
-                                <th>Dirección</th>
-                                <th>Municipio</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Los datos se llenarán aquí dinámicamente -->
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="clientesTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Nombre Negocio</th>
+                                    <th>NIT</th>
+                                    <th>Dirección</th>
+                                    <th>Municipio</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Los datos se llenarán aquí dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -807,24 +1281,24 @@
                     <i class="fas fa-print"></i> Imprimir Pedidos del Día
                 </button>
             </div>
-                    <table class="table table-bordered" id="pedidosTable" width="100%" cellspacing="0">
-                        <thead>
-                            <tr>
-                                <th>No. Pedido</th>
-                                <th>Fecha</th>
-                                <th>Cliente</th>
-                                <th>NIT</th>
-                                <th>Dirección</th>
-                                <th>Total</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Los datos se llenarán dinámicamente -->
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-bordered" id="pedidosTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>No. Pedido</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>NIT</th>
+                            <th>Dirección</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Los datos se llenarán dinámicamente -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

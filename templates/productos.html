@@ -358,6 +358,34 @@
             color: #721c24;
             font-weight: bold;
         }
+
+        .form-switch .form-check-input {
+            width: 3em;
+            height: 1.5em;
+            cursor: pointer;
+        }
+
+        .form-switch .form-check-input:checked {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+
+        .toggle-disponibilidad {
+            transition: all 0.3s ease;
+        }
+
+        .badge.bg-success {
+            background-color: #28a745 !important;
+        }
+
+        .badge.bg-danger {
+            background-color: #dc3545 !important;
+        }
+
+        /* Prevenir selección de texto al hacer clic en el toggle */
+        .form-check {
+            user-select: none;
+        }
     </style>
 </head>
 
@@ -407,6 +435,13 @@
                 <div class="nav-item-content">
                     <i class="fas fa-chart-line"></i>
                     Reporte de Inventario
+                </div>
+            </a>
+            <div class="nav-header">Sistema</div>
+            <a href="/usuarios" class="nav-item" style="background-color: var(--hover-blue);">
+                <div class="nav-item-content">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Usuarios</span>
                 </div>
             </a>
         </div>
@@ -469,6 +504,7 @@
                                                     <th>Marca</th>
                                                     <th>Stock</th>
                                                     <th>Precio</th>
+                                                    <th>Disponibilidad</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -702,6 +738,28 @@
                         return `Q. ${parseFloat(data || 0).toFixed(2)}`;
                     }
                 },
+
+                {
+                    "data": "Disponible",
+                    "render": function(data, type, row) {
+                        const checked = data ? 'checked' : '';
+                        const color = data ? 'success' : 'danger';
+                        const texto = data ? 'Disponible' : 'No disponible';
+                        
+                        return `
+                            <div class="form-check form-switch d-flex align-items-center justify-content-center">
+                                <input 
+                                    class="form-check-input toggle-disponibilidad" 
+                                    type="checkbox" 
+                                    ${checked}
+                                    data-codigo="${row.Codigo}"
+                                    style="cursor: pointer; width: 3em; height: 1.5em;"
+                                    title="${texto}">
+                                <span class="badge bg-${color} ms-2">${texto}</span>
+                            </div>
+                        `;
+                    }
+                },
                 
             ],
             "pageLength": 10,
@@ -725,6 +783,17 @@
             "order": [[1, "asc"]], // Ordenar por nombre
             "responsive": true
         });
+
+        $('#productosTable tbody').on('change', '.toggle-disponibilidad', function(e) {
+            e.stopPropagation(); // Evitar que se active el clic de la fila
+            
+            const checkbox = $(this);
+            const codigo = checkbox.data('codigo');
+            const disponible = checkbox.is(':checked');
+            
+            cambiarDisponibilidad(codigo, disponible, checkbox);
+        });
+
 
         // Evento de clic en las filas para mostrar detalles
         $('#productosTable tbody').on('click', 'tr', function() {
@@ -766,6 +835,64 @@
         // Cargar marcas para el modal
         cargarMarcas();
     });
+
+    async function cambiarDisponibilidad(codigo, disponible, checkbox) {
+        try {
+            const response = await fetch('/api/productos/cambiar_disponibilidad', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    codigo_producto: codigo,
+                    disponible: disponible
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor');
+            }
+            
+            const result = await response.json();
+            
+            // Actualizar badge al lado del toggle
+            const badge = checkbox.closest('div').find('.badge');
+            if (disponible) {
+                badge.removeClass('bg-danger').addClass('bg-success').text('Disponible');
+                checkbox.attr('title', 'Disponible');
+            } else {
+                badge.removeClass('bg-success').addClass('bg-danger').text('No disponible');
+                checkbox.attr('title', 'No disponible');
+            }
+            
+            // Mostrar notificación
+            Swal.fire({
+                icon: 'success',
+                title: '¡Actualizado!',
+                text: result.message,
+                timer: 2000,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+            
+            // Recargar datos de la tabla
+            dataTable.ajax.reload(null, false);
+            
+        } catch (error) {
+            console.error('Error al cambiar disponibilidad:', error);
+            
+            // Revertir el checkbox en caso de error
+            checkbox.prop('checked', !disponible);
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo cambiar la disponibilidad del producto',
+                confirmButtonColor: '#5271ff'
+            });
+        }
+    }
 
     async function insertarProducto(productoData) {
         try {
