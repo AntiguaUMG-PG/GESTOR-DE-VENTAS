@@ -949,6 +949,8 @@
         }
 
         
+
+        
     </style>
 </head>
 
@@ -1053,7 +1055,7 @@
                         <div class="col-md-6">
                             <div class="card mb-4">
                                 <div class="card-body">
-                                    <p class="card-text"><strong>Número de Pedido: </strong><span id="numeroPedido">12345</span></p>
+                                    <p class="card-text"><strong>Número de Pedido: </strong><span id="numeroPedido"></span></p>
                                     <p class="card-text"><strong>Estado: </strong><span id="estadoPedido">Abierto</span></p>
                                     <p class="card-text"><strong>Fecha: </strong><span id="fechaPedido"></span></p>
                                 </div>
@@ -1134,10 +1136,10 @@
                                                     </td>
                                                     <td><input type="text" class="form-control" id="presentacion" readonly></td>
                                                     <td>
-                                                        <input type="number" class="form-control" id="cantidadProducto" min="1">
+                                                        <input type="number" class="form-control" value="1" id="cantidadProducto" min="1">
                                                         <input type="hidden" id="stockDisponible">
                                                     </td>
-                                                    <td><input type="number" class="form-control" id="precioProducto" readonly></td>
+                                                    <td><input type="number" class="form-control" id="precioProducto" ></td>
                                                     <td><input type="number" class="form-control" id="totalProducto" readonly></td>
                                                     <td><button type="button" id="agregarProducto" class="btn btn-primary">Agregar</button></td>
                                             </tbody>
@@ -1178,6 +1180,12 @@
                                 </div>
 
                                 <button type="submit" id="registrarPedido" class="btn btn-success">Registrar Pedido</button>
+                                <button type="button" id="actualizarPedido" class="btn btn-warning" style="display: none;">
+                                    <i class="fas fa-sync-alt"></i> Actualizar Pedido
+                                </button>
+                                <button type="button" id="cancelarEdicion" class="btn btn-secondary" style="display: none;">
+                                    <i class="fas fa-times"></i> Cancelar Edición
+                                </button>
                             </form>
                               
                         </div>
@@ -1255,50 +1263,67 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- Barra de búsqueda y filtros -->
                     <div class="row mb-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="fechaInicio">Fecha Inicio:</label>
                             <input type="date" id="fechaInicio" class="form-control">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="fechaFin">Fecha Fin:</label>
                             <input type="date" id="fechaFin" class="form-control">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label>&nbsp;</label>
                             <button id="buscarPedidos" class="btn btn-primary form-control">
                                 <i class="fas fa-search"></i> Buscar
                             </button>
                         </div>
+                        <div class="col-md-3">
+                            <label>&nbsp;</label>
+                            <div class="btn-group w-100" role="group">
+                                <!-- Botón de impresión del día -->
+                                <button class="btn btn-info" onclick="imprimirPedidosDelDia()" title="Imprimir pedidos de hoy">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                                <!-- Botón con selector de fecha -->
+                                <button class="btn btn-secondary" onclick="imprimirPedidosPorFecha()" title="Imprimir por fecha">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h3 text-gray-800">Toma de Pedidos</h1>
-                    <p class="mb-0">Complete el formulario para registrar un nuevo pedido</p>
+                    <!-- Campo de búsqueda en la tabla -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <input type="text" id="buscarPedido" class="form-control" 
+                                placeholder="🔍 Buscar en la tabla...">
+                        </div>
+                    </div>
+
+                    <!-- Tabla de pedidos -->
+                    <table class="table table-bordered table-hover" id="pedidosTable" width="100%" cellspacing="0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>No. Pedido</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>NIT</th>
+                                <th>Dirección</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Los datos se llenarán aquí dinámicamente -->
+                        </tbody>
+                    </table>
                 </div>
-                <button class="btn btn-info" onclick="imprimirPedidosDelDia()">
-                    <i class="fas fa-print"></i> Imprimir Pedidos del Día
-                </button>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-bordered" id="pedidosTable" width="100%" cellspacing="0">
-                    <thead>
-                        <tr>
-                            <th>No. Pedido</th>
-                            <th>Fecha</th>
-                            <th>Cliente</th>
-                            <th>NIT</th>
-                            <th>Dirección</th>
-                            <th>Total</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Los datos se llenarán dinámicamente -->
-                    </tbody>
-                </table>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1406,65 +1431,141 @@ jQuery.noConflict(); // Activa el modo no conflicto
 (function($) { 
     $(document).ready(function() {
         const pedidosModal = document.getElementById('pedidosModal')
-        pedidosModal.addEventListener('show.bs.modal', function () {
+        
+        // Función para cargar pedidos con filtros opcionales
+        function cargarPedidos(fechaInicio = '', fechaFin = '') {
+            // Construir URL con parámetros
+            let url = '/listado_pedidos';
+            let params = [];
+            
+            if (fechaInicio) {
+                params.push('fecha_inicio=' + fechaInicio);
+            }
+            if (fechaFin) {
+                params.push('fecha_fin=' + fechaFin);
+            }
+            
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+            
             $.ajax({
-                url: '/listado_pedidos', // Este endpoint deberá hacer el JOIN entre las tablas
+                url: url,
                 method: 'GET',
                 success: function(data) {
+                    console.log('Datos recibidos:', data);
+                    
+                    // Destruir DataTable si existe
+                    if ($.fn.DataTable.isDataTable('#pedidosTable')) {
+                        $('#pedidosTable').DataTable().destroy();
+                    }
+                    
                     var pedidosTable = $('#pedidosTable tbody');
                     pedidosTable.empty();
+                    
+                    if (!data || data.length === 0) {
+                        pedidosTable.append('<tr><td colspan="8" class="text-center">No hay pedidos en el rango de fechas seleccionado</td></tr>');
+                        return;
+                    }
+                    
                     data.forEach(function(pedido) {
-                        // Formatear la fecha
-                        let fecha = new Date(pedido.FECHA).toLocaleDateString('es-GT', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit'
-                        });
-                        
-                        // Formatear el total
-                        let total = parseFloat(pedido.TOTAL_DOCUMENTO).toFixed(2);
-                        
-                        var row = '<tr>' +
-                            '<td>' + pedido.NUMERO_PEDIDO + '</td>' +
-                            '<td>' + fecha + '</td>' +
-                            '<td>' + pedido.NOMBRE_CLIENTE + '</td>' +
-                            '<td>' + pedido.NIT + '</td>' +
-                            '<td>' + pedido.DIRECCION + '</td>' +
-                            '<td>Q. ' + total + '</td>' +
-                            '<td>' + pedido.ESTADO + '</td>' +
-                            '<td>' +
-                            '<button type="button" class="btn btn-info btn-sm ver-detalle" ' +
-                            'data-pedido="' + pedido.NUMERO_PEDIDO + '">' +
-                            '<i class="fas fa-eye"></i></button> ' +
-                            '<button type="button" class="btn btn-success btn-sm imprimir-pedido" ' +
-                            'data-pedido="' + pedido.NUMERO_PEDIDO + '">' +
-                            '<i class="fas fa-print"></i></button>' +
-                            '</td>' +
-                            '</tr>';
-                        pedidosTable.append(row);
+                        try {
+                            let fecha = 'N/A';
+                            if (pedido.FECHA) {
+                                try {
+                                    fecha = new Date(pedido.FECHA).toLocaleDateString('es-GT', {
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit'
+                                    });
+                                } catch (e) {
+                                    console.error('Error al formatear fecha:', e);
+                                    fecha = pedido.FECHA;
+                                }
+                            }
+                            
+                            let total = '0.00';
+                            try {
+                                total = parseFloat(pedido.TOTAL_DOCUMENTO || 0).toFixed(2);
+                            } catch (e) {
+                                console.error('Error al formatear total:', e);
+                            }
+                            
+                            var row = '<tr>' +
+                                '<td>' + (pedido.NUMERO_PEDIDO || 'N/A') + '</td>' +
+                                '<td>' + fecha + '</td>' +
+                                '<td>' + (pedido.NOMBRE_CLIENTE || 'N/A') + '</td>' +
+                                '<td>' + (pedido.NIT || 'N/A') + '</td>' +
+                                '<td>' + (pedido.DIRECCION || 'N/A') + '</td>' +
+                                '<td>Q. ' + total + '</td>' +
+                                '<td>' + (pedido.ESTADO || 'N/A') + '</td>' +
+                                '<td>' +
+                                '<button type="button" class="btn btn-info btn-sm ver-detalle" ' +
+                                'data-pedido="' + pedido.NUMERO_PEDIDO + '">' +
+                                '<i class="fas fa-eye"></i></button> ' +
+                                '<button type="button" class="btn btn-warning btn-sm editar-pedido" ' +
+                                'data-pedido="' + pedido.NUMERO_PEDIDO + '" data-bs-dismiss="modal">' +
+                                '<i class="fas fa-edit"></i></button> ' +
+                                '<button type="button" class="btn btn-success btn-sm imprimir-pedido" ' +
+                                'data-pedido="' + pedido.NUMERO_PEDIDO + '">' +
+                                '<i class="fas fa-print"></i></button>' +
+                                '</td>' +
+                                '</tr>';
+                            pedidosTable.append(row);
+                        } catch (error) {
+                            console.error('Error al procesar pedido:', pedido, error);
+                        }
                     });
 
-                    // Inicializar DataTable si no está ya inicializada
-                    if (!$.fn.DataTable.isDataTable('#pedidosTable')) {
-                        $('#pedidosTable').DataTable({
-                            language: {
-                                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
-                            },
-                            order: [[0, 'desc']],
-                            pageLength: 10,
-                            responsive: true
-                        });
-                    }
+                    // Inicializar DataTable
+                    $('#pedidosTable').DataTable({
+                        language: {
+                            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+                        },
+                        order: [[0, 'desc']],
+                        pageLength: 10,
+                        responsive: true
+                    });
                 },
-                error: function() {
+                error: function(xhr, status, error) {
+                    console.error('Error en AJAX:', {xhr, status, error});
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: 'Error al cargar los pedidos',
+                        text: 'Error al cargar los pedidos: ' + error,
                         confirmButtonColor: '#5271ff'
                     });
                 }
             });
+        }
+
+        // Cargar pedidos al abrir el modal
+        pedidosModal.addEventListener('show.bs.modal', function () {
+            // Establecer fecha de hoy por defecto
+            const hoy = new Date().toISOString().split('T')[0];
+            $('#fechaInicio').val(hoy);
+            $('#fechaFin').val(hoy);
+            
+            // Cargar pedidos del día
+            cargarPedidos(hoy, hoy);
+        });
+
+        // Evento del botón buscar
+        $('#buscarPedidos').on('click', function() {
+            const fechaInicio = $('#fechaInicio').val();
+            const fechaFin = $('#fechaFin').val();
+            
+            if (fechaInicio && fechaFin && fechaInicio > fechaFin) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Fechas inválidas',
+                    text: 'La fecha de inicio no puede ser mayor a la fecha fin',
+                    confirmButtonColor: '#5271ff'
+                });
+                return;
+            }
+            
+            cargarPedidos(fechaInicio, fechaFin);
         });
 
         // Evento para ver detalles del pedido
@@ -1512,6 +1613,71 @@ jQuery.noConflict(); // Activa el modo no conflicto
             });
         });
 
+        // Evento para editar pedido
+        $(document).on('click', '.editar-pedido', function() {
+            var numeroPedido = $(this).data('pedido');
+            
+            $.ajax({
+                url: '/obtener_pedido_completo/' + numeroPedido,
+                method: 'GET',
+                success: function(data) {
+                    // Cargar datos del encabezado
+                    $('#numeroPedido').text(data.encabezado.NUMERO_PEDIDO);
+                    $('#codigoCliente').val(data.encabezado.CODIGO_CLIENTE);
+                    $('#nombreCliente').val(data.encabezado.NOMBRE_CLIENTE);
+                    $('#nombreNegocio').val(data.encabezado.NOMBRE_NEGOCIO || '');
+                    $('#nitCliente').val(data.encabezado.NIT);
+                    $('#direccionCliente').val(data.encabezado.DIRECCION);
+                    $('#municipioCliente').val(data.encabezado.MUNICIPIO || '');
+                    $('#comentarios').val(data.encabezado.COMENTARIOS || '');
+                    
+                    // Limpiar tabla de detalles
+                    $('#detalleOrden tbody').empty();
+                    
+                    // Cargar productos del pedido
+                    data.detalle.forEach(function(item) {
+                        var newRow = `<tr>
+                            <td>${item.CODIGO_PRODUCTO}</td>
+                            <td>${item.NOMBRE_PRODUCTO}</td>
+                            <td>${item.UNIDAD_MEDIDA}</td>
+                            <td contenteditable="true">${item.CANTIDAD}</td>
+                            <td contenteditable="true">${parseFloat(item.PRECIO_UNITARIO).toFixed(2)}</td>
+                            <td>${parseFloat(item.TOTAL_LINEA).toFixed(2)}</td>
+                            <td>
+                                <button type="button" class="btn btn-danger btn-sm eliminarProducto">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                        $('#detalleOrden tbody').append(newRow);
+                    });
+                    
+                    actualizarTotalGeneral();
+                    
+                    // Cambiar el botón de registrar por actualizar
+                    $('#registrarPedido').hide();
+                    $('#actualizarPedido').show();
+                    $('#cancelarEdicion').show();
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Pedido Cargado',
+                        text: 'Puede modificar los datos del pedido',
+                        confirmButtonColor: '#5271ff',
+                        timer: 1000
+                    });
+                },
+                error: function() {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error al cargar el pedido',
+                        confirmButtonColor: '#5271ff'
+                    });
+                }
+            });
+        });
+
         // Evento para imprimir pedido
         $(document).on('click', '.imprimir-pedido', function() {
             var numeroPedido = $(this).data('pedido');
@@ -1553,6 +1719,92 @@ function formatearFecha(fechaString) {
     return `${partes[2]}-${partes[1]}-${partes[0]}`;
 }
 
+async function imprimirPedidosDelDia() {
+    try {
+        // Obtener la fecha actual en formato YYYY-MM-DD
+        const ahora = new Date();
+        const offsetGuatemala = -6; // Guatemala es GMT-6
+        const fechaGuatemala = new Date(ahora.getTime() + (offsetGuatemala * 60 * 60 * 1000) + (ahora.getTimezoneOffset() * 60 * 1000));
+        
+        const anio = fechaGuatemala.getFullYear();
+        const mes = String(fechaGuatemala.getMonth() + 1).padStart(2, '0');
+        const dia = String(fechaGuatemala.getDate()).padStart(2, '0');
+        const fechaHoy = `${anio}-${mes}-${dia}`;
+        
+        // Mostrar un mensaje de carga
+        Swal.fire({
+            title: 'Generando reporte...',
+            text: 'Por favor espere',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        // Abrir la ventana de impresión con los pedidos del día
+        window.open('/imprimir_pedidos_del_dia?fecha=' + fechaHoy, '_blank');
+        
+        // Cerrar el mensaje de carga
+        Swal.close();
+        
+    } catch (error) {
+        console.error('Error al imprimir pedidos del día:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo generar el reporte de pedidos',
+            confirmButtonColor: '#5271ff'
+        });
+    }
+}
+
+// Función alternativa con selector de fecha
+async function imprimirPedidosPorFecha() {
+    const { value: fecha } = await Swal.fire({
+        title: 'Seleccione la fecha',
+        input: 'date',
+        inputValue: new Date().toISOString().split('T')[0],
+        inputAttributes: {
+            max: new Date().toISOString().split('T')[0]
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Imprimir',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#5271ff',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'Debe seleccionar una fecha'
+            }
+        }
+    });
+    
+    if (fecha) {
+        try {
+            Swal.fire({
+                title: 'Generando reporte...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            window.open('/imprimir_pedidos_del_dia?fecha=' + fecha, '_blank');
+            Swal.close();
+            
+        } catch (error) {
+            console.error('Error al imprimir pedidos:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo generar el reporte de pedidos',
+                confirmButtonColor: '#5271ff'
+            });
+        }
+    }
+}
+
+
 async function verificarExistencia(codigoProducto, cantidad) {
     try {
         const response = await fetch('/verificar_stock', {
@@ -1565,17 +1817,6 @@ async function verificarExistencia(codigoProducto, cantidad) {
                 cantidad: cantidad
             })
         });
-
-        const data = await response.json();
-        if (!data.success) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Existencia excedida',
-                text: data.message,
-                confirmButtonColor: '#5271ff'
-            });
-            return false;
-        }
         return true;
     } catch (error) {
         console.error('Error:', error);
@@ -1590,16 +1831,6 @@ function calcularTotal() {
     
     console.log('Stock disponible al calcular:', stockDisponible); // Debug
     
-    if (cantidad > stockDisponible) {
-        jQuery("#cantidadProducto").val(stockDisponible);
-        cantidad = stockDisponible;
-        Swal.fire({
-            icon: 'warning',
-            title: 'Existencia excedida',
-            text: `Solo hay ${stockDisponible} unidades disponibles`,
-            confirmButtonColor: '#5271ff'
-        });
-    }
     
     var total = cantidad * precio;
     jQuery("#totalProducto").val(total.toFixed(2));
@@ -1751,6 +1982,26 @@ document.addEventListener('DOMContentLoaded', function() {
             actualizarTotalGeneral();
         });
 
+        $(document).on('input', '#detalleOrden tbody tr td:nth-child(4)', function() {
+            var row = $(this).closest('tr');
+            var cantidad = parseFloat($(this).text()) || 0;
+            var precio = parseFloat(row.find('td:eq(4)').text()) || 0;
+            var nuevoTotal = cantidad * precio;
+            
+            row.find('td:eq(5)').text(nuevoTotal.toFixed(2));
+            actualizarTotalGeneral();
+        });
+
+        $(document).on('input', '#detalleOrden tbody tr td:nth-child(5)', function() {
+            var row = $(this).closest('tr');
+            var cantidad = parseFloat(row.find('td:eq(3)').text()) || 0;
+            var precio = parseFloat($(this).text()) || 0;
+            var nuevoTotal = cantidad * precio;
+            
+            row.find('td:eq(5)').text(nuevoTotal.toFixed(2));
+            actualizarTotalGeneral();
+        });
+
         $('#registrarPedido').on('click', async function(e) {
             e.preventDefault();
             
@@ -1858,6 +2109,114 @@ document.addEventListener('DOMContentLoaded', function() {
                     confirmButtonColor: '#5271ff'
                 });
             }
+        });
+
+        $('#actualizarPedido').on('click', async function(e) {
+            e.preventDefault();
+            
+            if ($('#detalleOrden tbody tr').length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Advertencia',
+                    text: 'Debe tener al menos un producto en el pedido',
+                    confirmButtonColor: '#5271ff'
+                });
+                return;
+            }
+
+            try {
+                const numeroPedido = $('#numeroPedido').text();
+                
+                const encabezado = {
+                    NUMERO_PEDIDO: numeroPedido,
+                    CODIGO_CLIENTE: $('#codigoCliente').val(),
+                    NOMBRE_CLIENTE: $('#nombreCliente').val(),
+                    NIT: $('#nitCliente').val(),
+                    DIRECCION: $('#direccionCliente').val(),
+                    TOTAL_PEDIDO: parseFloat($('#totalGeneral').text().replace('Q. ', '').replace(',', '')) || 0,
+                    COMENTARIOS: $('#comentarios').val()
+                };
+
+                const detalles = [];
+                $('#detalleOrden tbody tr').each(function() {
+                    const fila = $(this);
+                    detalles.push({
+                        NUMERO_PEDIDO: numeroPedido,
+                        CODIGO_PRODUCTO: fila.find('td:eq(0)').text(),
+                        NOMBRE_PRODUCTO: fila.find('td:eq(1)').text(),
+                        UNIDAD_MEDIDA: fila.find('td:eq(2)').text(),
+                        CANTIDAD: parseInt(fila.find('td:eq(3)').text()),
+                        PRECIO_UNITARIO: parseFloat(fila.find('td:eq(4)').text()),
+                        TOTAL: parseFloat(fila.find('td:eq(5)').text())
+                    });
+                });
+
+                const response = await fetch('/actualizar_pedido', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ encabezado, detalles })
+                });
+
+                if (!response.ok) throw new Error('Error al actualizar el pedido');
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Pedido Actualizado',
+                    text: 'El pedido se ha actualizado correctamente',
+                    confirmButtonColor: '#5271ff'
+                });
+
+                limpiarFormulario();
+                $('#actualizarPedido').hide();
+                $('#cancelarEdicion').hide();
+                $('#registrarPedido').show();
+                obtenerNumeroPedido();
+
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudo actualizar el pedido',
+                    confirmButtonColor: '#5271ff'
+                });
+            }
+        });
+
+        $('#cancelarEdicion').on('click', function(e) {
+            e.preventDefault();
+            
+            Swal.fire({
+                title: '¿Cancelar edición?',
+                text: 'Los cambios no guardados se perderán',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#5271ff',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, cancelar',
+                cancelButtonText: 'No, continuar editando'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Limpiar formulario
+                    limpiarFormulario();
+                    
+                    // Ocultar botones de edición y mostrar el de registrar
+                    $('#actualizarPedido').hide();
+                    $('#cancelarEdicion').hide();
+                    $('#registrarPedido').show();
+                    
+                    // Obtener nuevo número de pedido
+                    obtenerNumeroPedido();
+                    
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Edición cancelada',
+                        text: 'El formulario ha sido restaurado',
+                        confirmButtonColor: '#5271ff',
+                        timer: 2000
+                    });
+                }
+            });
         });
     });
 });

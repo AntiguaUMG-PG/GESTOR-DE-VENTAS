@@ -38,6 +38,16 @@
             color: #555;
         }
 
+        .tables-wrapper {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .half-table {
+            width: 49%;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -54,7 +64,8 @@
         }
 
         td {
-            padding: 6px;
+            font-size: 7px;
+            padding: 2px;
             border: 1px solid #ddd;
         }
 
@@ -129,62 +140,70 @@
         <div class="sub-info">Fecha del reporte: {{ fecha }}</div>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Código</th>
-                <th>Producto</th>
-                <th>Marca</th>
-                <th>Unidad</th>
-                <th>Inventario</th>
-                <th>Vendido</th>
-                <th>Faltante</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in datos %}
-            <tr>
-                <td>{{ item.codigo_producto }}</td>
-                <td>{{ item.nombre_producto }}</td>
-                <td>{{ item.marca }}</td>
-                <td>{{ item.unidad_medida }}</td>
-                <td class="text-right">{{ item.inventario_actual }}</td>
-                <td class="text-right">{{ item.cantidad_vendida }}</td>
-                <td class="text-right">{{ item.faltante }}</td>
-                <td class="text-center {% if item.estado == 'INSUFICIENTE' %}text-danger{% else %}text-success{% endif %}">
-                    {{ item.estado }}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="tables-wrapper">
+        <div class="half-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Producto</th>
+                        <th>Unidad</th>
+                        <th>Inventario</th>
+                        <th>Vendido</th>
+                        <th>Faltante</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in datos[:(datos|length // 2)] %}
+                    <tr>
+                        <td>{{ item.codigo_producto }}</td>
+                        <td>{{ item.nombre_producto }}</td>
+                        <td>{{ item.unidad_medida }}</td>
+                        <td class="text-right">{{ item.inventario_actual }}</td>
+                        <td class="text-right">{{ item.cantidad_vendida }}</td>
+                        <td class="text-right">{{ item.faltante }}</td>
+                        <td class="text-center {% if item.estado == 'INSUFICIENTE' %}text-danger{% else %}text-success{% endif %}">
+                            {{ item.estado }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-    <div class="summary">
-        <table>
-            <tr>
-                <td class="label">Total Productos con Ventas:</td>
-                <td class="value">{{ resumen.total_productos_vendidos }}</td>
-            </tr>
-            <tr>
-                <td class="label">Con Inventario Suficiente:</td>
-                <td class="value text-success">{{ resumen.productos_con_inventario_suficiente }}</td>
-            </tr>
-            <tr>
-                <td class="label">Con Inventario Insuficiente:</td>
-                <td class="value text-danger">{{ resumen.productos_con_inventario_insuficiente }}</td>
-            </tr>
-            <tr>
-                <td class="label">Unidades Faltantes Totales:</td>
-                <td class="value text-danger">{{ resumen.total_unidades_faltantes }}</td>
-            </tr>
-            <tr>
-                <td class="label">Porcentaje de Cobertura:</td>
-                <td class="value">{{ resumen.porcentaje_cobertura }}%</td>
-            </tr>
-        </table>
+        <div class="half-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Producto</th>
+                        <th>Unidad</th>
+                        <th>Inventario</th>
+                        <th>Vendido</th>
+                        <th>Faltante</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in datos[(datos|length // 2):] %}
+                    <tr>
+                        <td>{{ item.codigo_producto }}</td>
+                        <td>{{ item.nombre_producto }}</td>
+                        <td>{{ item.unidad_medida }}</td>
+                        <td class="text-right">{{ item.inventario_actual }}</td>
+                        <td class="text-right">{{ item.cantidad_vendida }}</td>
+                        <td class="text-right">{{ item.faltante }}</td>
+                        <td class="text-center {% if item.estado == 'INSUFICIENTE' %}text-danger{% else %}text-success{% endif %}">
+                            {{ item.estado }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-
+    <div class="summary"></div>
     <div class="footer">
         Reporte generado automáticamente por el sistema — Distribuidora Sebaot
     </div>

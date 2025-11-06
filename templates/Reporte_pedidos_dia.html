@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos del Día - {{ fecha }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 10pt;
+            padding: 20px;
+            background: #fff;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #333;
+            padding-bottom: 15px;
+        }
+        
+        .company-name {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .report-title {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #34495e;
+            margin-bottom: 5px;
+        }
+        
+        .report-date {
+            font-size: 11pt;
+            color: #7f8c8d;
+        }
+        
+        .summary {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 11pt;
+        }
+        
+        .summary-row:not(:last-child) {
+            border-bottom: 1px dashed #dee2e6;
+        }
+        
+        .pedido {
+            page-break-inside: avoid;
+            margin-bottom: 30px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            background: #ffffff;
+        }
+        
+        .pedido-header {
+            background: #3498db;
+            color: white;
+            padding: 10px 15px;
+            margin: -15px -15px 15px -15px;
+            border-radius: 5px 5px 0 0;
+            font-size: 12pt;
+            font-weight: bold;
+        }
+        
+        .pedido-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 3px;
+        }
+        
+        .pedido-info-item {
+            font-size: 9pt;
+        }
+        
+        .pedido-info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        
+        thead {
+            background: #34495e;
+            color: white;
+        }
+        
+        th {
+            padding: 8px 5px;
+            text-align: left;
+            font-size: 9pt;
+            font-weight: bold;
+        }
+        
+        td {
+            border: 1px solid #ddd;
+            padding: 6px 5px;
+            font-size: 9pt;
+        }
+        
+        tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        tbody tr:hover {
+            background: #e9ecef;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .total-row {
+            font-weight: bold;
+            background: #e9ecef !important;
+            border-top: 2px solid #333;
+        }
+        
+        .comentarios-box {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 3px;
+            font-size: 9pt;
+        }
+        
+        .comentarios-label {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 5px;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+            border-top: 2px solid #ddd;
+            padding-top: 15px;
+        }
+        
+        .footer-info {
+            margin: 5px 0;
+        }
+        
+        .page-break {
+            page-break-after: always;
+        }
+        
+        @media print {
+            body {
+                padding: 10px;
+            }
+            
+            .no-print {
+                display: none;
+            }
+            
+            .pedido {
+                page-break-inside: avoid;
+            }
+            
+            @page {
+                margin: 1cm;
+            }
+        }
+        
+        /* Estilos para el estado del pedido */
+        .estado-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 8pt;
+            font-weight: bold;
+        }
+        
+        .estado-pendiente {
+            background: #ffeaa7;
+            color: #d63031;
+        }
+        
+        .estado-completado {
+            background: #55efc4;
+            color: #00b894;
+        }
+        
+        .estado-cancelado {
+            background: #fab1a0;
+            color: #d63031;
+        }
+    </style>
+</head>
+<body>
+    <!-- Encabezado del Reporte -->
+    <div class="header">
+        <div class="company-name">DISTRIBUIDORA SEBAOT</div>
+        <div class="report-title">REPORTE DE PEDIDOS DEL DÍA</div>
+        <div class="report-date">{{ fecha }}</div>
+    </div>
+
+    <!-- Resumen General -->
+    <div class="summary">
+        <div class="summary-row">
+            <span><strong>Total de Pedidos:</strong></span>
+            <span>{{ cantidad_pedidos }}</span>
+        </div>
+        <div class="summary-row">
+            <span><strong>Total General del Día:</strong></span>
+            <span><strong>Q. {{ "%.2f"|format(total_general) }}</strong></span>
+        </div>
+    </div>
+
+    <!-- Listado de Pedidos -->
+    {% for pedido in pedidos %}
+    <div class="pedido">
+        <!-- Encabezado del Pedido -->
+        <div class="pedido-header">
+            PEDIDO No. {{ pedido.NUMERO_PEDIDO }}
+            <span class="estado-badge estado-{{ pedido.ESTADO|lower }}">{{ pedido.ESTADO }}</span>
+        </div>
+
+        <!-- Información del Pedido -->
+        <div class="pedido-info">
+            <div class="pedido-info-item">
+                <span class="pedido-info-label">Fecha:</span> {{ pedido.FECHA }}
+            </div>
+            <div class="pedido-info-item">
+                <span class="pedido-info-label">Cliente:</span> {{ pedido.NOMBRE_CLIENTE }}
+            </div>
+            <div class="pedido-info-item">
+                <span class="pedido-info-label">NIT:</span> {{ pedido.NIT }}
+            </div>
+            <div class="pedido-info-item">
+                <span class="pedido-info-label">Dirección:</span> {{ pedido.DIRECCION }}
+            </div>
+        </div>
+
+        <!-- Tabla de Detalles -->
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 10%;">Código</th>
+                    <th style="width: 35%;">Producto</th>
+                    <th style="width: 10%;" class="text-center">U.M.</th>
+                    <th style="width: 10%;" class="text-right">Cantidad</th>
+                    <th style="width: 15%;" class="text-right">Precio Unit.</th>
+                    <th style="width: 20%;" class="text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in pedido.DETALLES %}
+                <tr>
+                    <td>{{ item.CODIGO_PRODUCTO }}</td>
+                    <td>{{ item.NOMBRE_PRODUCTO }}</td>
+                    <td class="text-center">{{ item.UNIDAD_MEDIDA }}</td>
+                    <td class="text-right">{{ "%.2f"|format(item.CANTIDAD) }}</td>
+                    <td class="text-right">Q. {{ "%.2f"|format(item.PRECIO_UNITARIO) }}</td>
+                    <td class="text-right">Q. {{ "%.2f"|format(item.TOTAL_LINEA) }}</td>
+                </tr>
+                {% endfor %}
+                
+                <!-- Fila de Total -->
+                <tr class="total-row">
+                    <td colspan="5" class="text-right">TOTAL DEL PEDIDO:</td>
+                    <td class="text-right">Q. {{ "%.2f"|format(pedido.TOTAL_DOCUMENTO) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Comentarios (si existen) -->
+        {% if pedido.COMENTARIOS %}
+        <div class="comentarios-box">
+            <div class="comentarios-label">Comentarios:</div>
+            <div>{{ pedido.COMENTARIOS }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <!-- Pie de Página -->
+    <div class="footer">
+        <div class="footer-info">
+            <strong>Fecha y hora de impresión:</strong> {{ fecha_impresion }}
+        </div>
+        <div class="footer-info">
+            Este documento fue generado automáticamente por el Sistema de Gestión de Pedidos
+        </div>
+        <div class="footer-info">
+            DISTRIBUIDORA SEBAOT © 2024
+        </div>
+    </div>
+
+    <!-- Script para auto-imprimir -->
+    <script>
+        window.onload = function() {
+            // Auto-imprimir cuando se carga la página
+            setTimeout(function() {
+                window.print();
+            }, 500);
+            
+            // Cerrar ventana después de imprimir o cancelar
+            window.onafterprint = function() {
+                // Opcional: descomentar para cerrar automáticamente
+                // window.close();
+            };
+        };
+    </script>
+</body>
+</html>

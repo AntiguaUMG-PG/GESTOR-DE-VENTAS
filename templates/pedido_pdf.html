@@ -3,9 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        @page {
-            size: letter portrait;
-            margin: 2cm;
+        @page { 
+            size: letter; 
+            margin: 1.5cm;
+            margin-header: 0mm;
+            margin-footer: 0mm;
+        }
+
+        /* Estilos para impresión */
+        @media print {
+            .no-print { display: none; }
+            body { margin: 0; }
+            
+            /* Ocultar encabezados y pies de página del navegador */
+            @page {
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+            
+            /* Forzar que no se muestren URLs ni fechas */
+            a[href]:after {
+                content: none !important;
+            }
+            
+            /* Ocultar elementos del navegador */
+            header, footer {
+                display: none !important;
+            }
         }
         body {
             font-family: Helvetica, sans-serif;

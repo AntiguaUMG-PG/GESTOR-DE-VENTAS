@@ -1,200 +1,403 @@
 <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Reporte de Pedidos del Día</title>
-            <style>
-                @page { 
-                    size: letter; 
-                    margin: 1.5cm; 
-                }
-                body {
-                    font-family: Arial, sans-serif;
-                    font-size: 10pt;
-                    line-height: 1.3;
-                }
-                .header {
-                    text-align: center;
-                    margin-bottom: 20px;
-                    border-bottom: 2px solid #333;
-                    padding-bottom: 10px;
-                }
-                .company-name {
-                    font-size: 18pt;
-                    font-weight: bold;
-                    margin-bottom: 5px;
-                }
-                .report-title {
-                    font-size: 14pt;
-                    font-weight: bold;
-                    margin-bottom: 5px;
-                }
-                .report-date {
-                    font-size: 10pt;
-                    color: #666;
-                }
-                .summary {
-                    background: #f0f0f0;
-                    padding: 10px;
-                    margin-bottom: 15px;
-                    border-radius: 5px;
-                }
-                .summary-row {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 5px;
-                }
-                .pedido {
-                    page-break-inside: avoid;
-                    margin-bottom: 20px;
-                    border: 1px solid #ddd;
-                    padding: 10px;
-                    border-radius: 5px;
-                }
-                .pedido-header {
-                    background: #5271ff;
-                    color: white;
-                    padding: 8px;
-                    margin: -10px -10px 10px -10px;
-                    border-radius: 5px 5px 0 0;
-                }
-                .pedido-info {
-                    margin-bottom: 10px;
-                }
-                .info-row {
-                    margin-bottom: 3px;
-                }
-                .label {
-                    font-weight: bold;
-                    display: inline-block;
-                    width: 120px;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin: 10px 0;
-                }
-                th {
-                    background: #f8f9fa;
-                    border: 1px solid #ddd;
-                    padding: 6px;
-                    text-align: left;
-                    font-size: 9pt;
-                }
-                td {
-                    border: 1px solid #ddd;
-                    padding: 5px;
-                    font-size: 9pt;
-                }
-                .text-right {
-                    text-align: right;
-                }
-                .total-row {
-                    font-weight: bold;
-                    background: #f8f9fa;
-                }
-                .footer {
-                    margin-top: 30px;
-                    text-align: center;
-                    font-size: 8pt;
-                    color: #666;
-                    border-top: 1px solid #ddd;
-                    padding-top: 10px;
-                }
-                @media print {
-                    .no-print { display: none; }
-                    body { margin: 0; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <div class="company-name">DISTRIBUIDORA SEBAOT</div>
-                <div class="report-title">REPORTE DE PEDIDOS DEL DÍA</div>
-                <div class="report-date">${fechaHoy}</div>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos del Día - {{ fecha }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 8pt;
+            padding: 15px;
+            background: #fff;
+        }
+        
+        /* Portada del reporte */
+        .portada {
+            page-break-after: always;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        
+        .portada .logo-empresa {
+            font-size: 32pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .portada .titulo-reporte {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #34495e;
+            margin-bottom: 30px;
+        }
+        
+        .portada .fecha-reporte {
+            font-size: 18pt;
+            color: #7f8c8d;
+            margin-bottom: 50px;
+        }
+        
+        .portada .resumen-box {
+            background: #ecf0f1;
+            padding: 30px 50px;
+            border-radius: 10px;
+            border: 2px solid #bdc3c7;
+        }
+        
+        .portada .resumen-item {
+            font-size: 14pt;
+            margin: 15px 0;
+            color: #2c3e50;
+        }
+        
+        .portada .resumen-label {
+            font-weight: bold;
+        }
+        
+        .portada .resumen-value {
+            color: #3498db;
+            font-weight: bold;
+        }
+        
+        /* Cada comprobante de pedido en su propia página */
+        .pedido-comprobante {
+            page-break-before: always;
+            page-break-after: always;
+            page-break-inside: avoid;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Encabezado de cada pedido */
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+        
+        .header .company-name {
+            font-size: 18pt;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        .header .document-type {
+            font-size: 16pt;
+            font-weight: bold;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 5px;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        /* Contenedor principal del comprobante */
+        .comprobante-content {
+            flex: 1;
+            border: 3px solid #34495e;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            background: #fff;
+        }
+        
+        /* Sección de información */
+        .info-section {
+            padding: 25px;
+            background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+        }
+        
+        .info-row {
+            padding: 8px 0;
+            font-size: 8pt;
+            color: #2c3e50;
+            border-bottom: 1px dashed #dee2e6;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-row .label {
+            font-weight: bold;
+            color: #34495e;
+            display: inline-block;
+            min-width: 180px;
+        }
+        
+        /* Badge de estado */
+        .estado-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 10pt;
+            font-weight: bold;
+        }
+        
+        .estado-abierto {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .estado-completado {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .estado-cancelado {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        /* Tabla de productos */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+        
+        thead {
+            background: #34495e;
+            color: white;
+        }
+        
+        th {
+            padding: 8px 4px;
+            text-align: left;
+            font-size: 10pt;
+            font-weight: bold;
+            border: 1px solid #2c3e50;
+        }
+        
+        td {
+            padding: 4px 2px;
+            font-size: 8pt;
+            border: 1px solid #dee2e6;
+        }
+        
+        tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        tbody tr:hover {
+            background: #e9ecef;
+        }
+        
+        /* Totales */
+        .totals {
+            padding: 25px;
+            background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+            text-align: right;
+            border-top: 3px solid #34495e;
+        }
+        
+        .totals div {
+            font-weight: bold;
+            font-size: 12pt;
+            color: #2c3e50;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+        }
+        
+        /* Comentarios */
+        .comments {
+            padding: 20px 25px;
+            background: #fff3cd;
+            border-top: 1px solid #ffc107;
+            border-radius: 0 0 5px 5px;
+            font-size: 10pt;
+        }
+        
+        .comments .label {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 8px;
+            font-size: 11pt;
+        }
+        
+        .comments div:last-child {
+            color: #856404;
+            line-height: 1.6;
+        }
+        
+        /* Footer en cada página */
+        .pedido-footer {
+            margin-top: auto;
+            padding: 15px 20px;
+            text-align: center;
+            font-size: 9pt;
+            color: #7f8c8d;
+            border-top: 1px solid #dee2e6;
+            background: #f8f9fa;
+        }
+        
+        @page { 
+            size: letter; 
+            margin: 1.5cm;
+            margin-header: 0mm;
+            margin-footer: 0mm;
+        }
+
+        /* Estilos para impresión */
+        @media print {
+            .no-print { display: none; }
+            body { margin: 0; }
+            
+            /* Ocultar encabezados y pies de página del navegador */
+            @page {
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+            
+            /* Forzar que no se muestren URLs ni fechas */
+            a[href]:after {
+                content: none !important;
+            }
+            
+            /* Ocultar elementos del navegador */
+            header, footer {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- PORTADA DEL REPORTE -->
+    <div class="portada">
+        <div class="logo-empresa">DISTRIBUIDORA SEBAOT</div>
+        <div class="titulo-reporte">REPORTE DE PEDIDOS DEL DÍA</div>
+        <div class="fecha-reporte">{{ fecha }}</div>
+        
+        <div class="resumen-box">
+            <div class="resumen-item">
+                <span class="resumen-label">Total de Pedidos:</span>
+                <span class="resumen-value">{{ cantidad_pedidos }}</span>
+            </div>
+            <div class="resumen-item">
+                <span class="resumen-label">Total General del Día:</span>
+                <span class="resumen-value">Q. {{ "%.2f"|format(total_general) }}</span>
+            </div>
+            <div class="resumen-item">
+                <span class="resumen-label">Fecha de Generación:</span>
+                <span class="resumen-value">{{ fecha_impresion }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPROBANTES INDIVIDUALES (cada uno en su página) -->
+    {% for pedido in pedidos %}
+    <div class="pedido-comprobante">
+        <!-- Encabezado del Pedido -->
+        <div class="header">
+            <div class="company-name">DISTRIBUIDORA SEBAOT</div>
+            <div class="document-type">PEDIDO N° {{ pedido.NUMERO_PEDIDO }}</div>
+        </div>
+
+        <div class="comprobante-content">
+            <!-- Información del Pedido -->
+            <div class="info-section">
+                <div class="info-row">
+                    <span class="label">Fecha y hora del Pedido:</span> {{ pedido.FECHA }}
+                </div>
+                <div class="info-row">
+                    <span class="label">Cliente:</span> {{ pedido.NOMBRE_CLIENTE }}
+                </div>
+                <div class="info-row">
+                    <span class="label">NIT:</span> {{ pedido.NIT }}
+                </div>
+                <div class="info-row">
+                    <span class="label">Dirección:</span> {{ pedido.DIRECCION }}
+                </div>
+                <div class="info-row">
+                    <span class="label">Estado:</span>
+                    <span class="estado-badge estado-{{ pedido.ESTADO|lower }}">
+                        {{ pedido.ESTADO }}
+                    </span>
+                </div>
             </div>
 
-            <div class="summary">
-                <div class="summary-row">
-                    <span><strong>Total de Pedidos:</strong></span>
-                    <span>${cantidadPedidos}</span>
-                </div>
-                <div class="summary-row">
-                    <span><strong>Total General:</strong></span>
-                    <span>Q. ${totalGeneral.toFixed(2)}</span>
+            <!-- Tabla de Productos -->
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">Código</th>
+                        <th style="width: 35%;">Producto</th>
+                        <th style="width: 10%; text-align: center;">Unidad</th>
+                        <th style="width: 12%; text-align: right;">Cantidad</th>
+                        <th style="width: 15%; text-align: right;">Precio Unit.</th>
+                        <th style="width: 18%; text-align: right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in pedido.DETALLES %}
+                    <tr>
+                        <td>{{ item.CODIGO_PRODUCTO }}</td>
+                        <td>{{ item.NOMBRE_PRODUCTO }}</td>
+                        <td style="text-align: center;">{{ item.UNIDAD_MEDIDA }}</td>
+                        <td style="text-align: right;">{{ "%.2f"|format(item.CANTIDAD) }}</td>
+                        <td style="text-align: right;">Q. {{ "%.2f"|format(item.PRECIO_UNITARIO) }}</td>
+                        <td style="text-align: right;">Q. {{ "%.2f"|format(item.TOTAL_LINEA) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Totales -->
+            <div class="totals">
+                <div>
+                    Total del Pedido: Q. {{ "%.2f"|format(pedido.TOTAL_DOCUMENTO) }}
                 </div>
             </div>
 
-            ${pedidos.map(pedido => `
-                <div class="pedido">
-                    <div class="pedido-header">
-                        <strong>PEDIDO No. ${pedido.NUMERO_PEDIDO}</strong> - ${pedido.ESTADO}
-                    </div>
-                    
-                    <div class="pedido-info">
-                        <div class="info-row">
-                            <span class="label">Fecha:</span> ${pedido.FECHA}
-                        </div>
-                        <div class="info-row">
-                            <span class="label">Cliente:</span> ${pedido.NOMBRE_CLIENTE}
-                        </div>
-                        <div class="info-row">
-                            <span class="label">NIT:</span> ${pedido.NIT}
-                        </div>
-                        <div class="info-row">
-                            <span class="label">Dirección:</span> ${pedido.DIRECCION}
-                        </div>
-                    </div>
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 10%">Código</th>
-                                <th style="width: 40%">Producto</th>
-                                <th style="width: 15%">Unidad</th>
-                                <th style="width: 10%" class="text-right">Cant.</th>
-                                <th style="width: 12%" class="text-right">Precio</th>
-                                <th style="width: 13%" class="text-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${pedido.DETALLE.map(item => `
-                                <tr>
-                                    <td>${item.CODIGO_PRODUCTO}</td>
-                                    <td>${item.NOMBRE_PRODUCTO}</td>
-                                    <td>${item.UNIDAD_MEDIDA}</td>
-                                    <td class="text-right">${item.CANTIDAD}</td>
-                                    <td class="text-right">Q. ${parseFloat(item.PRECIO_UNITARIO).toFixed(2)}</td>
-                                    <td class="text-right">Q. ${parseFloat(item.TOTAL_LINEA).toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                            <tr class="total-row">
-                                <td colspan="5" class="text-right">TOTAL DEL PEDIDO:</td>
-                                <td class="text-right">Q. ${parseFloat(pedido.TOTAL_DOCUMENTO).toFixed(2)}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    ${pedido.COMENTARIOS ? `
-                        <div style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 3px;">
-                            <strong>Comentarios:</strong> ${pedido.COMENTARIOS}
-                        </div>
-                    ` : ''}
-                </div>
-            `).join('')}
-
-            <div class="footer">
-                <div>Fecha y hora de impresión: ${new Date().toLocaleString('es-GT')}</div>
-                <div>Este documento fue generado automáticamente</div>
+            <!-- Comentarios (si existen) -->
+            {% if pedido.COMENTARIOS %}
+            <div class="comments">
+                <div class="label">Comentarios:</div>
+                <div>{{ pedido.COMENTARIOS }}</div>
             </div>
+            {% endif %}
+        </div>
 
-            <script>
-                window.onload = function() {
-                    window.print();
-                    window.onafterprint = function() {
-                        window.close();
-                    };
-                };
-            </script>
-        </body>
-        </html>
+        <!-- Footer del comprobante -->
+        <div class="pedido-footer">
+            Generado el {{ fecha_impresion }} | 
+            DISTRIBUIDORA SEBAOT © 2024
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Script para auto-imprimir -->
+    <script>
+        window.onload = function() {
+            // Esperar a que todo se cargue
+            setTimeout(function() {
+                window.print();
+            }, 800);
+            
+            // Opcional: cerrar después de imprimir
+            window.onafterprint = function() {
+                // Descomentar si quieres cierre automático
+                // window.close();
+            };
+        };
+    </script>
+</body>
+</html>

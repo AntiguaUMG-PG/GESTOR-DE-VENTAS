@@ -981,7 +981,7 @@
                 </div>
                 <div class="no-print">
                     <button class="btn btn-danger" onclick="generarPDF()">
-                        <i class="fas fa-file-pdf"></i> Descargar PDF
+                        <i class="fas fa-file-pdf"></i> Generar Reporte PDF
                     </button>
                 </div>
             </div>
@@ -1081,7 +1081,6 @@
                                     <th>Unidad</th>
                                     <th>Inventario</th>
                                     <th>Vendido</th>
-                                    <th>Resultante</th>
                                     <th>Faltante</th>
                                     <th>Estado</th>
                                 </tr>
@@ -1202,13 +1201,6 @@
                     { data: 'unidad_medida' },
                     { data: 'inventario_actual' },
                     { data: 'cantidad_vendida' },
-                    { 
-                        data: 'inventario_resultante',
-                        render: function(data) {
-                            const color = data < 0 ? 'text-danger' : 'text-success';
-                            return `<span class="${color}"><strong>${data}</strong></span>`;
-                        }
-                    },
                     { 
                         data: 'faltante',
                         render: function(data) {
