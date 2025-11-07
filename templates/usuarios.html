@@ -127,6 +127,12 @@
             width: 20px;
         }
 
+        /* Enlaces activos */
+        a.nav-item.active {
+            background-color: var(--hover-blue);
+        }
+
+
         /* Submenús */
         .submenu {
             background-color: rgba(255, 255, 255, 0.1);
@@ -315,7 +321,12 @@
                     Clientes
                 </div>
             </a>
-
+            <a href="/marcas" class="nav-item ">
+                <div class="nav-item-content">
+                    <i class="fas fa-tags"></i>
+                    Marcas
+                </div>
+            </a>
             <!-- Módulo Productos -->
             <a href="/productos" class="nav-item">
                 <div class="nav-item-content">
@@ -338,7 +349,7 @@
                 </div>
             </a>
             <div class="nav-header">Sistema</div>
-            <a href="/usuarios" class="nav-item" style="background-color: var(--hover-blue);">
+            <a href="/usuarios" class="nav-item active">
                 <div class="nav-item-content">
                     <i class="fas fa-user-cog"></i>
                     <span>Usuarios</span>

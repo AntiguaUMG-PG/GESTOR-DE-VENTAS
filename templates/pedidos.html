@@ -130,7 +130,10 @@
             margin-right: 0.75rem;
             width: 20px;
         }
-
+        /* Enlaces activos */
+        a.nav-item.active {
+            background-color: var(--hover-blue);
+        }
         /* Submenús */
         .submenu {
         background-color: white;
@@ -597,8 +600,63 @@
                 font-size: 14px;
                 min-height: 38px;
             }
+/* Estilos responsivos para tablas en móviles */
+        @media screen and (max-width: 768px) {
+            /* Tabla de ingreso de productos */
+            #productosTable thead {
+                display: none;
+            }
+            
+            #productosTable tbody tr {
+                display: block;
+                margin-bottom: 1rem;
+                border: 2px solid #dee2e6;
+                border-radius: 8px;
+                padding: 1rem;
+                background: #fff;
+            }
+            
+            #productosTable tbody td {
+                display: block;
+                text-align: left !important;
+                padding: 0.5rem 0;
+                border: none;
+            }
+            
+            #productosTable tbody td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                display: block;
+                margin-bottom: 0.3rem;
+                color: var(--primary-blue);
+            }
+            
+            #productosTable tbody td input,
+            #productosTable tbody td button {
+                width: 100%;
+            }
+            
+            
+            
+            /* Ajustar contenedores */
+            .container-fluid {
+                padding: 1rem !important;
+            }
+            
+            .card {
+                margin-bottom: 1rem;
+            }
+            
+            /* Botones en móvil */
+            #registrarPedido,
+            #actualizarPedido,
+            #cancelarEdicion {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+        }
 
-            /* Tabla de productos en el pedido */
+        /* Tabla de productos en el pedido */
             #detalleOrden {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
@@ -980,7 +1038,12 @@
                     Clientes
                 </div>
             </a>
-
+            <a href="/marcas" class="nav-item ">
+                <div class="nav-item-content">
+                    <i class="fas fa-tags"></i>
+                    Marcas
+                </div>
+            </a>
             <!-- Módulo Productos -->
             <a href="/productos" class="nav-item">
                 <div class="nav-item-content">
@@ -989,7 +1052,7 @@
                 </div>
             </a>
             <!-- Módulo Pedidos -->
-            <a href="/pedidos" class="nav-item">
+            <a href="/pedidos" class="nav-item active">
                 <div class="nav-item-content">
                     <i class="fas fa-shopping-cart"></i>
                     Pedidos
@@ -1003,7 +1066,7 @@
                 </div>
             </a>
             <div class="nav-header">Sistema</div>
-            <a href="/usuarios" class="nav-item" style="background-color: var(--hover-blue);">
+            <a href="/usuarios" class="nav-item">
                 <div class="nav-item-content">
                     <i class="fas fa-user-cog"></i>
                     <span>Usuarios</span>

@@ -238,6 +238,10 @@
             border: 1px solid #dee2e6 !important;
             margin-left: 5px !important;
         }
+        /* Enlaces activos */
+        a.nav-item.active {
+            background-color: var(--hover-blue);
+        }
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -415,9 +419,14 @@
                     Clientes
                 </div>
             </a>
-
+            <a href="/marcas" class="nav-item">
+                <div class="nav-item-content">
+                    <i class="fas fa-tags"></i>
+                    Marcas
+                </div>
+            </a>
             <!-- Módulo Productos -->
-            <a href="/productos" class="nav-item">
+            <a href="/productos" class="nav-item active">
                 <div class="nav-item-content">
                     <i class="fas fas fa-box"></i>
                     Productos
@@ -438,7 +447,7 @@
                 </div>
             </a>
             <div class="nav-header">Sistema</div>
-            <a href="/usuarios" class="nav-item" style="background-color: var(--hover-blue);">
+            <a href="/usuarios" class="nav-item">
                 <div class="nav-item-content">
                     <i class="fas fa-user-cog"></i>
                     <span>Usuarios</span>
@@ -655,8 +664,7 @@
                                 <div class="input-group">
                                     <span class="input-group-text">Q</span>
                                     <input type="number" class="form-control" name="COSTO" 
-                                           value="0" min="0" step="0.01" 
-                                           placeholder="0.00">
+                                           value="0" min="0" step="0.01" >
                                 </div>
                             </div>
                         </div>
@@ -666,8 +674,7 @@
                                 <div class="input-group">
                                     <span class="input-group-text">Q</span>
                                     <input type="number" class="form-control" name="PRECIO" 
-                                        min="0" step="0.01" 
-                                        placeholder="Precio de venta">
+                                        min="0" step="0.01">
                                 </div>
                             </div>
                         </div>
@@ -1070,7 +1077,7 @@
         limpiarDetalles();
     }
 
-    function editarProducto(codigo) {
+    async function editarProducto(codigo) {
         const producto = productosData.find(p => p.Codigo == codigo);
         if (!producto) {
             Swal.fire({
@@ -1080,6 +1087,21 @@
                 confirmButtonColor: '#5271ff'
             });
             return;
+        }
+        let marcasHtml = '<option value="">Cargando marcas...</option>';
+    
+        try {
+            const response = await fetch('/api/marcas');
+            if (response.ok) {
+                const marcas = await response.json();
+                marcasHtml = '<option value="">Seleccione una marca</option>';
+                marcas.forEach(marca => {
+                    const selected = producto.Marca === marca.nombre ? 'selected' : '';
+                    marcasHtml += `<option value="${marca.id}" ${selected}>${marca.nombre}</option>`;
+                });
+            }
+        } catch (error) {
+            console.error('Error al cargar marcas:', error);
         }
 
         Swal.fire({
@@ -1093,6 +1115,12 @@
                     <div class="mb-3">
                         <label class="form-label">Presentacion:</label>
                         <input id="editMedida" class="form-control" value="${producto.Medida}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Marca:</label>
+                        <select id="editMarca" class="form-control">
+                            ${marcasHtml}
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Stock:</label>
@@ -1123,9 +1151,15 @@
                 const medida = document.getElementById('editMedida').value;
                 const precio = document.getElementById('editPrecio').value;
                 const costo = document.getElementById('editCosto').value;
+                const marca = document.getElementById('editMarca').value;
 
                 if (!nombre.trim()) {
                     Swal.showValidationMessage('El nombre es requerido');
+                    return false;
+                }
+
+                if (!marca) {
+                    Swal.showValidationMessage('La marca es requerida');
                     return false;
                 }
 
@@ -1135,7 +1169,8 @@
                     EXISTENCIA: parseFloat(stock) || 0,
                     UNIDAD_MEDIDA: medida,
                     COSTO: parseFloat(costo) || 0,
-                    PRECIO: parseFloat(precio) || 0
+                    PRECIO: parseFloat(precio) || 0,
+                    MARCA: parseInt(marca)
                 };
             }
         }).then((result) => {

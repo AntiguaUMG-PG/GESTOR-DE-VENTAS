@@ -322,7 +322,7 @@
         </div>
 
         <div class="nav-section">
-            <a href="/index" class="nav-item">
+            <a href="/index" class="nav-item active">
                 <div class="nav-item-content">
                     <i class="fas fa-home"></i>
                     Principal
@@ -338,7 +338,13 @@
                     Clientes
                 </div>
             </a>
-
+            <!-- Módulo Marcas -->
+            <a href="/marcas" class="nav-item ">
+                <div class="nav-item-content">
+                    <i class="fas fa-tags"></i>
+                    Marcas
+                </div>
+            </a>
             <!-- Módulo Productos -->
             <a href="/productos" class="nav-item">
                 <div class="nav-item-content">
@@ -361,7 +367,7 @@
                 </div>
             </a>
             <div class="nav-header">Sistema</div>
-            <a href="/usuarios" class="nav-item" style="background-color: var(--hover-blue);">
+            <a href="/usuarios" class="nav-item">
                 <div class="nav-item-content">
                     <i class="fas fa-user-cog"></i>
                     <span>Usuarios</span>
@@ -638,6 +644,12 @@
         cargarMarcas();
     });
 
+    // Cargar marcas cuando se abre el modal
+    document.getElementById('modalInsertar').addEventListener('show.bs.modal', function () {
+        console.log('Modal abierto, cargando marcas...');
+        cargarMarcas();
+    });
+
     async function insertarProducto(productoData) {
         try {
             const response = await fetch('/api/productos/insertar', {
@@ -754,32 +766,32 @@
     }
 
     async function cargarMarcas() {
-        try {
-            const response = await fetch('/api/marcas');
-            if (response.ok) {
-                const marcas = await response.json();
-                const select = document.querySelector('select[name="MARCA"]');
-                select.innerHTML = '<option value="">Seleccione una marca</option>';
-                marcas.forEach(marca => {
-                    select.innerHTML += `<option value="${marca.id}">${marca.nombre}</option>`;
-                });
-            } else {
-                console.error('Error al cargar marcas:', response.status);
-            }
-        } catch (error) {
-            console.error('Error al cargar marcas:', error);
-            // Fallback con marcas básicas
+    try {
+        const response = await fetch('/api/marcas');
+        if (response.ok) {
+            const marcas = await response.json();
             const select = document.querySelector('select[name="MARCA"]');
-            select.innerHTML = `
-                <option value="">Seleccione una marca</option>
-                <option value="1">ADAMS</option>
-                <option value="2">BEST</option>
-                <option value="3">MARINELA</option>
-                <option value="4">BIMBO</option>
-                <option value="59">SIN MARCA</option>
-            `;
+            select.innerHTML = '<option value="">Seleccione una marca</option>';
+            marcas.forEach(marca => {
+                select.innerHTML += `<option value="${marca.id}">${marca.nombre}</option>`;
+            });
+        } else {
+            console.error('Error al cargar marcas:', response.status);
         }
+    } catch (error) {
+        console.error('Error al cargar marcas:', error);
+        // Fallback con marcas básicas
+        const select = document.querySelector('select[name="MARCA"]');
+        select.innerHTML = `
+            <option value="">Seleccione una marca</option>
+            <option value="1">ADAMS</option>
+            <option value="2">BEST</option>
+            <option value="3">MARINELA</option>
+            <option value="4">BIMBO</option>
+            <option value="59">SIN MARCA</option>
+        `;
     }
+}
 
     function refreshData() {
         console.log('Actualizando datos...');

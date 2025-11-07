@@ -200,6 +200,15 @@ async def get_usuarios_page(request: Request, user: dict = Depends(require_login
         "usuario": user.get("nombre_usuario"),
         "perfil": user.get("codigo_perfil")
     })
+
+@app.get("/marcas")
+async def get_marcas_page(request: Request, user: dict = Depends(require_login)):
+    """Página de gestión de marcas"""
+    return templates.TemplateResponse("marcas.html", {
+        "request": request,
+        "usuario": user.get("nombre_usuario"),
+        "perfil": user.get("codigo_perfil")
+    })
 # ================================================
 # RUTAS DE AUTENTICACIÓN
 # ================================================
@@ -1686,14 +1695,14 @@ async def insertar_producto(producto_data: dict):
         
         cursor.execute("""
             INSERT INTO productos (nombre_producto, unidad_medida, marca, existencia, costo, disponible)
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING codigo_producto
         """, (
             producto_data.get('NOMBRE_PRODUCTO'),
             producto_data.get('UNIDAD_MEDIDA'),
             int(producto_data.get('MARCA')),
             float(producto_data.get('EXISTENCIA', 0)),
-            producto_data.get('COSTO', 0),
+            float(producto_data.get('COSTO', 0)),
             disponible
         ))
         
@@ -1716,7 +1725,7 @@ async def insertar_producto(producto_data: dict):
         raise HTTPException(status_code=500, detail=f"Error al insertar producto: {str(e)}")
     finally:
         cursor.close()
-        connection.close()
+        connection.close()  
 
 @app.put("/api/productos/actualizar")
 async def actualizar_producto(producto_data: dict):
@@ -1729,25 +1738,43 @@ async def actualizar_producto(producto_data: dict):
     try:
         cursor = connection.cursor()
         
+        # Actualizar producto incluyendo la marca
         cursor.execute("""
             UPDATE productos SET
-                nombre_producto = %s, existencia = %s, unidad_medida = %s, costo = %s  
+                nombre_producto = %s, 
+                existencia = %s, 
+                unidad_medida = %s,
+                marca = %s
             WHERE codigo_producto = %s
         """, (
             producto_data.get('NOMBRE_PRODUCTO'),
             float(producto_data.get('EXISTENCIA', 0)),
             producto_data.get('UNIDAD_MEDIDA'),
-            producto_data.get('COSTO', 0),
+            int(producto_data.get('MARCA')),
             int(producto_data.get('Codigo'))
         ))
         
-        # Actualizar precio
+        # Actualizar o insertar precio
         precio = producto_data.get('PRECIO')
         if precio:
+            # Verificar si ya existe un precio
             cursor.execute("""
-                UPDATE precios SET precio = %s
+                SELECT COUNT(*) FROM precios 
                 WHERE codigo_producto = %s AND nivel_precio = 1
-            """, (float(precio), int(producto_data.get('Codigo'))))
+            """, (int(producto_data.get('Codigo')),))
+            
+            existe_precio = cursor.fetchone()[0] > 0
+            
+            if existe_precio:
+                cursor.execute("""
+                    UPDATE precios SET precio = %s
+                    WHERE codigo_producto = %s AND nivel_precio = 1
+                """, (float(precio), int(producto_data.get('Codigo'))))
+            else:
+                cursor.execute("""
+                    INSERT INTO precios (nivel_precio, codigo_producto, precio)
+                    VALUES (1, %s, %s)
+                """, (int(producto_data.get('Codigo')), float(precio)))
         
         connection.commit()
         return {"success": True, "message": "Producto actualizado correctamente"}
@@ -1755,6 +1782,8 @@ async def actualizar_producto(producto_data: dict):
     except Exception as e:
         connection.rollback()
         print(f"Error al actualizar producto: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error al actualizar producto: {str(e)}")
     finally:
         cursor.close()
@@ -1954,7 +1983,179 @@ async def get_productos_data() -> List[dict]:
         cursor.close()
         connection.close()
 
+# ================================================
+# RUTAS PARA MARCAS
+# ================================================
 
+
+@app.get("/api/marcas/listado")
+async def get_marcas_listado(user: dict = Depends(require_login)):
+    """Obtener listado completo de marcas con conteo de productos"""
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT 
+                m.codigo_marca as id,
+                m.nombre_marca as nombre,
+                COUNT(p.codigo_producto) as productos_count
+            FROM marcas m
+            LEFT JOIN productos p ON m.codigo_marca = p.marca
+            GROUP BY m.codigo_marca, m.nombre_marca
+            ORDER BY m.nombre_marca
+        """)
+        
+        marcas = cursor.fetchall()
+        
+        return [{
+            'id': row[0],
+            'nombre': row[1],
+            'productos_count': row[2]
+        } for row in marcas]
+        
+    except Exception as e:
+        print(f"Error al obtener marcas: {e}")
+        raise HTTPException(status_code=500, detail="Error al obtener marcas")
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.post("/api/marcas/insertar")
+async def insertar_marca(marca_data: dict, user: dict = Depends(require_login)):
+    """Insertar nueva marca"""
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        
+        nombre_marca = marca_data.get('NOMBRE_MARCA', '').strip().upper()
+        
+        if not nombre_marca:
+            raise HTTPException(status_code=400, detail="El nombre de la marca es requerido")
+        
+        # Verificar si ya existe
+        cursor.execute("SELECT COUNT(*) FROM marcas WHERE UPPER(nombre_marca) = %s", (nombre_marca,))
+        existe = cursor.fetchone()[0] > 0
+        
+        if existe:
+            raise HTTPException(status_code=400, detail="Ya existe una marca con ese nombre")
+        
+        cursor.execute("""
+            INSERT INTO marcas (nombre_marca)
+            VALUES (%s)
+            RETURNING codigo_marca
+        """, (nombre_marca,))
+        
+        codigo_marca = cursor.fetchone()[0]
+        connection.commit()
+        
+        print(f"✅ Marca insertada: {nombre_marca} (código: {codigo_marca})")
+        
+        return {"success": True, "message": "Marca insertada correctamente", "id": codigo_marca}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error al insertar marca: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al insertar marca: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.put("/api/marcas/actualizar")
+async def actualizar_marca(marca_data: dict, user: dict = Depends(require_login)):
+    """Actualizar marca existente"""
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        
+        codigo_marca = marca_data.get('id')
+        nombre_marca = marca_data.get('NOMBRE_MARCA', '').strip().upper()
+        
+        if not nombre_marca:
+            raise HTTPException(status_code=400, detail="El nombre de la marca es requerido")
+        
+        # Verificar si ya existe otro con ese nombre
+        cursor.execute("""
+            SELECT COUNT(*) FROM marcas 
+            WHERE UPPER(nombre_marca) = %s AND codigo_marca != %s
+        """, (nombre_marca, codigo_marca))
+        existe = cursor.fetchone()[0] > 0
+        
+        if existe:
+            raise HTTPException(status_code=400, detail="Ya existe otra marca con ese nombre")
+        
+        cursor.execute("""
+            UPDATE marcas 
+            SET nombre_marca = %s
+            WHERE codigo_marca = %s
+        """, (nombre_marca, codigo_marca))
+        
+        connection.commit()
+        
+        print(f"✅ Marca actualizada: {nombre_marca}")
+        
+        return {"success": True, "message": "Marca actualizada correctamente"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error al actualizar marca: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al actualizar marca: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.delete("/api/marcas/eliminar/{codigo_marca}")
+async def eliminar_marca(codigo_marca: int, user: dict = Depends(require_login)):
+    """Eliminar marca (solo si no tiene productos asociados)"""
+    connection = conexion_sql()
+    
+    if not connection:
+        raise HTTPException(status_code=500, detail="No se pudo establecer conexión a la base de datos")
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Verificar si tiene productos asociados
+        cursor.execute("SELECT COUNT(*) FROM productos WHERE marca = %s", (codigo_marca,))
+        productos_count = cursor.fetchone()[0]
+        
+        if productos_count > 0:
+            return {
+                "success": False, 
+                "error": f"No se puede eliminar la marca porque tiene {productos_count} producto(s) asociado(s)"
+            }
+        
+        cursor.execute("DELETE FROM marcas WHERE codigo_marca = %s", (codigo_marca,))
+        
+        if cursor.rowcount > 0:
+            connection.commit()
+            print(f"✅ Marca eliminada: {codigo_marca}")
+            return {"success": True, "message": "Marca eliminada correctamente"}
+        else:
+            return {"success": False, "error": "No se encontró la marca"}
+            
+    except Exception as e:
+        connection.rollback()
+        print(f"Error al eliminar marca: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al eliminar marca: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
 
 # ================================================
 # RUTAS DE USUARIOS
