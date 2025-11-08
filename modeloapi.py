@@ -103,7 +103,7 @@ def conexion_sql():
     try:
         # Configuración de conexión a PostgreSQL
         connection = psycopg2.connect(
-            host="dpg-d3pcushr0fns73ahqf10-a.oregon-postgres.render.com",  # o tu host
+            host="dpg-d3pcushr0fns73ahqf10-a.oregon-postgres.render.com", 
             port=5432,
             database="gestor_pedidos",
             user="manager_sebaot",
@@ -1744,13 +1744,15 @@ async def actualizar_producto(producto_data: dict):
                 nombre_producto = %s, 
                 existencia = %s, 
                 unidad_medida = %s,
-                marca = %s
+                marca = %s,
+                costo = %s
             WHERE codigo_producto = %s
         """, (
             producto_data.get('NOMBRE_PRODUCTO'),
             float(producto_data.get('EXISTENCIA', 0)),
             producto_data.get('UNIDAD_MEDIDA'),
             int(producto_data.get('MARCA')),
+            float(producto_data.get('COSTO', 0)), 
             int(producto_data.get('Codigo'))
         ))
         

@@ -1,0 +1,863 @@
+:root {
+    --sidebar-width: 240px;
+    --primary-blue: rgb(82, 113, 255);
+    --hover-blue: rgb(72, 103, 245);
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--primary-blue);
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    color: white;
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+.logo {
+    text-align: center;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    font-weight: bold;
+    font-size: 1.25rem;
+    line-height: 1.2;
+}
+
+#wrapper {
+    min-height: 100vh;
+    margin-left: var(--sidebar-width);
+}
+
+#content {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.nav-section {
+    padding: 0 1rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    color: white;
+    text-decoration: none;
+    border-radius: 0.25rem;
+    margin-bottom: 0.25rem;
+    cursor: pointer;
+}
+
+.nav-item:hover {
+    background-color: var(--hover-blue);
+}
+
+.nav-item-content {
+    display: flex;
+    align-items: center;
+}
+
+.nav-item i {
+    margin-right: 0.75rem;
+    width: 20px;
+}
+
+/* Enlaces activos */
+a.nav-item.active {
+    background-color: var(--hover-blue);
+}
+.stat-card {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.badge-insufficient {
+    background-color: #dc3545;
+    color: white;
+}
+
+.badge-sufficient {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.table-insufficient {
+    background-color: #ffebee !important;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loading-overlay.active {
+    display: flex;
+}
+
+@media print {
+    .sidebar, .no-print {
+        display: none !important;
+    }
+    #wrapper {
+        margin-left: 0 !important;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 1rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Boton menu movil */
+.mobile-menu-btn {
+    display: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1001;
+    background: var(--primary-blue);
+    color: white;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: block;
+    }
+}
+
+/* Barra de usuario */
+.user-bar {
+    background: white;
+    padding: 1rem 2rem;
+    margin-bottom: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: between;
+    align-items: center;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-right: 0.5rem;
+}
+
+.logout-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    margin-left: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+.logout-btn:hover {
+    background: #c82333;
+}
+
+@media (max-width: 1024px) {
+    #content {
+        padding: 1.5rem;
+    }
+
+    .stats-grid {
+        gap: 1rem;
+    }
+
+    .charts-grid {
+        gap: 1rem;
+    }
+}
+
+/* ========================================================================== */
+/* RESPONSIVE PARA TABLETS Y MÓVILES (< 768px) */
+/* ========================================================================== */
+
+@media (max-width: 768px) {
+    /* Sidebar móvil */
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 2000;
+        width: 280px;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    /* Overlay cuando sidebar está abierto */
+    .sidebar.show::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 280px;
+        width: calc(100vw - 280px);
+        height: 100vh;
+        background: rgba(0,0,0,0.5);
+        z-index: -1;
+    }
+
+    /* Contenido principal */
+    #wrapper {
+        margin-left: 0;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 1rem;
+    }
+
+    #content {
+        padding: 1rem;
+        margin-top: 60px; /* Espacio para botón menú */
+    }
+
+    /* Botón menú móvil */
+    .mobile-menu-btn {
+        display: block !important;
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 1001;
+        background: var(--primary-blue);
+        color: white;
+        border: none;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .mobile-menu-btn:active {
+        transform: scale(0.95);
+    }
+
+    /* Barra de usuario */
+    .user-bar {
+        padding: 0.75rem 1rem;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .user-info {
+        margin-left: 0;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .logout-btn {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    /* Título de página */
+    .page-title {
+        font-size: 1.5rem;
+    }
+
+    /* Card del selector de fecha */
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .card-header {
+        padding: 0.75rem 1rem;
+    }
+
+    /* Selector de fecha responsive */
+    .date-selector {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .date-selector input,
+    .date-selector button {
+        width: 100%;
+        font-size: 16px; /* Previene zoom en iOS */
+    }
+
+    .date-selector .btn {
+        padding: 0.75rem;
+        min-height: 44px;
+    }
+
+    /* Estadísticas en columna */
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem;
+    }
+
+    /* Cards de estadísticas más compactos */
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .stat-card .h3 {
+        font-size: 1.5rem;
+    }
+
+    .stat-icon {
+        width: 45px;
+        height: 45px;
+    }
+
+    .stat-icon i {
+        font-size: 1.25rem;
+    }
+
+    /* Tabla responsive */
+    .table-responsive {
+        -webkit-overflow-scrolling: touch;
+        border-radius: 0.5rem;
+        margin: 0 -1rem; /* Extensión a los bordes */
+        padding: 0 1rem;
+    }
+
+    #reporteTable {
+        font-size: 13px;
+        min-width: 800px; /* Permite scroll horizontal */
+    }
+
+    #reporteTable thead th {
+        padding: 0.75rem 0.5rem;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    #reporteTable tbody td {
+        padding: 0.75rem 0.5rem;
+        white-space: nowrap;
+    }
+
+    /* Ocultar columnas menos importantes en móvil */
+    #reporteTable th:nth-child(3), /* Marca */
+    #reporteTable td:nth-child(3),
+    #reporteTable th:nth-child(4), /* Unidad */
+    #reporteTable td:nth-child(4) {
+        display: none;
+    }
+
+    /* Badges más pequeños */
+    .badge {
+        font-size: 11px;
+        padding: 0.35rem 0.5rem;
+    }
+
+
+    @keyframes slideHint {
+        0%, 100% { transform: translateY(-50%) translateX(0); }
+        50% { transform: translateY(-50%) translateX(-10px); }
+    }
+
+    .table-responsive.scrolled::after {
+        display: none;
+    }
+
+    /* Gráficos en columna */
+    .charts-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem;
+    }
+
+    /* Botones más grandes */
+    .btn {
+        padding: 0.75rem 1rem;
+        font-size: 16px;
+        min-height: 44px;
+    }
+
+    .btn-sm {
+        padding: 0.5rem 0.75rem;
+        font-size: 14px;
+        min-height: 38px;
+    }
+
+    /* Botón de exportar PDF */
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .btn-group .btn {
+        width: 100%;
+    }
+
+    /* DataTables controles */
+    .dataTables_wrapper {
+        font-size: 14px;
+    }
+
+    .dataTables_filter {
+        margin-bottom: 1rem;
+    }
+
+    .dataTables_filter input {
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-top: 0.5rem;
+        font-size: 16px;
+    }
+
+    .dataTables_length {
+        margin-bottom: 1rem;
+    }
+
+    .dataTables_length select {
+        font-size: 16px;
+        padding: 0.5rem;
+    }
+
+    .dataTables_info {
+        font-size: 13px;
+        padding-top: 0.75rem;
+    }
+
+    /* Paginación más compacta */
+    .dataTables_paginate {
+        margin-top: 1rem;
+    }
+
+    .pagination {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        justify-content: center;
+    }
+
+    .page-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 14px;
+        min-width: 38px;
+        text-align: center;
+    }
+
+    /* Card de productos críticos */
+    .critical-products-card {
+        margin-top: 1rem;
+    }
+
+    .critical-products-card .list-group-item {
+        padding: 0.75rem;
+        font-size: 14px;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+        position: fixed;
+        width: 100vw;
+        height: 100vh;
+    }
+
+    .loading-overlay.active {
+        display: flex;
+    }
+}
+
+/* ========================================================================== */
+/* RESPONSIVE PARA MÓVILES PEQUEÑOS (< 480px) */
+/* ========================================================================== */
+
+@media (max-width: 480px) {
+    /* Sidebar a pantalla completa */
+    .sidebar {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .sidebar.show::after {
+        display: none;
+    }
+
+    /* Contenido más compacto */
+    #content {
+        padding: 0.5rem;
+    }
+
+    /* Cards sin margen */
+    .card {
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+        border-radius: 0;
+    }
+
+    /* Títulos más pequeños */
+    h1, .page-title {
+        font-size: 1.25rem;
+    }
+
+    h6, .card-header h6 {
+        font-size: 0.9rem;
+    }
+
+    /* Estadísticas más compactas */
+    .stat-card {
+        padding: 0.75rem;
+    }
+
+    .stat-card .h3 {
+        font-size: 1.25rem;
+    }
+
+    .stat-card .small {
+        font-size: 11px;
+    }
+
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .stat-icon i {
+        font-size: 1rem;
+    }
+
+    /* Tabla aún más compacta */
+    #reporteTable {
+        font-size: 11px;
+    }
+
+    #reporteTable thead th,
+    #reporteTable tbody td {
+        padding: 0.5rem 0.25rem;
+    }
+
+    /* Ocultar más columnas en móviles pequeños */
+    #reporteTable th:nth-child(5), /* Inventario */
+    #reporteTable td:nth-child(5),
+    #reporteTable th:nth-child(6), /* Vendido */
+    #reporteTable td:nth-child(6) {
+        display: none;
+    }
+
+    /* Badge más pequeño */
+    .badge {
+        font-size: 10px;
+        padding: 0.25rem 0.4rem;
+    }
+
+    /* Logo más compacto */
+    .logo {
+        font-size: 1rem;
+        padding: 1rem;
+    }
+
+    /* Navegación más compacta */
+    .nav-item {
+        padding: 0.5rem 0.75rem;
+        font-size: 14px;
+    }
+
+    .nav-header {
+        font-size: 10px;
+    }
+
+    /* Inputs más pequeños pero táctiles */
+    input[type="date"] {
+        font-size: 14px;
+        padding: 0.5rem;
+    }
+
+    /* Paginación muy compacta */
+    .page-link {
+        padding: 0.4rem 0.6rem;
+        font-size: 12px;
+        min-width: 32px;
+    }
+}
+
+/* ========================================================================== */
+/* OPTIMIZACIÓN PARA ORIENTACIÓN HORIZONTAL */
+/* ========================================================================== */
+
+@media (max-width: 768px) and (orientation: landscape) {
+    .sidebar {
+        width: 240px;
+    }
+
+    #content {
+        padding: 1rem 1.5rem;
+    }
+
+    /* Usar mejor el espacio horizontal */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Mostrar más columnas en landscape */
+    #reporteTable th:nth-child(3),
+    #reporteTable td:nth-child(3),
+    #reporteTable th:nth-child(4),
+    #reporteTable td:nth-child(4) {
+        display: table-cell;
+    }
+}
+
+/* ========================================================================== */
+/* MEJORAS DE USABILIDAD TÁCTIL */
+/* ========================================================================== */
+
+@media (hover: none) and (pointer: coarse) {
+    /* Dispositivos táctiles */
+    
+    /* Áreas táctiles más grandes */
+    button,
+    a,
+    .nav-item,
+    .btn,
+    .page-link {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Feedback visual al tocar */
+    button:active,
+    .btn:active,
+    .nav-item:active,
+    .page-link:active {
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
+
+    /* Scroll suave */
+    * {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ========================================================================== */
+/* PREVENIR ZOOM EN iOS */
+/* ========================================================================== */
+
+@supports (-webkit-touch-callout: none) {
+    input[type="text"],
+    input[type="date"],
+    input[type="number"],
+    select {
+        font-size: 16px !important;
+    }
+}
+
+/* ========================================================================== */
+/* ESTILOS PARA IMPRESIÓN (mantener existente) */
+/* ========================================================================== */
+
+@media print {
+    .sidebar,
+    .mobile-menu-btn,
+    .user-bar,
+    .btn,
+    .no-print,
+    .dataTables_filter,
+    .dataTables_length,
+    .dataTables_info,
+    .dataTables_paginate {
+        display: none !important;
+    }
+
+    #wrapper {
+        margin-left: 0 !important;
+    }
+
+    #content {
+        padding: 0 !important;
+    }
+
+    .table {
+        font-size: 10px;
+    }
+
+    .card {
+        page-break-inside: avoid;
+        border: 1px solid #000;
+    }
+
+    /* Mostrar todas las columnas al imprimir */
+    #reporteTable th,
+    #reporteTable td {
+        display: table-cell !important;
+    }
+}
+
+/* ========================================================================== */
+/* ANIMACIONES Y TRANSICIONES SUAVES */
+/* ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ========================================================================== */
+/* SCROLLBAR PERSONALIZADO PARA MÓVIL */
+/* ========================================================================== */
+
+@media (max-width: 768px) {
+    .sidebar::-webkit-scrollbar,
+    .table-responsive::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+
+    .sidebar::-webkit-scrollbar-track,
+    .table-responsive::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar::-webkit-scrollbar-thumb,
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: rgba(82, 113, 255, 0.5);
+        border-radius: 2px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb:hover,
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: rgba(82, 113, 255, 0.7);
+    }
+}
+
+/* ========================================================================== */
+/* ESTILOS ADICIONALES ÚTILES */
+/* ========================================================================== */
+
+/* Prevenir selección accidental */
+.nav-item,
+.btn,
+.page-link {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Botón flotante para volver arriba en móvil */
+@media (max-width: 768px) {
+    .scroll-to-top {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--primary-blue);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        cursor: pointer;
+        z-index: 999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .scroll-to-top.show {
+        display: flex;
+    }
+
+    .scroll-to-top:active {
+        transform: scale(0.9);
+    }
+}
+
+/* Estado de tabla scrolleada */
+.table-responsive {
+    position: relative;
+}
