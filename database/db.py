@@ -7,7 +7,7 @@ def conexion_sql():
         connection = psycopg2.connect(
             host="dpg-da2675e1egvs739cgi7g-a.oregon-postgres.render.com", 
             port=5432,
-            database="gestor_pedidos",
+            database="gestor_pedidos_7z4u",
             user="manager_sebaot",
             password="onNqKFOhI0rDgDPTQee94dE6WHOKfAXC"
         )
